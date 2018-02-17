@@ -1,0 +1,23 @@
+#ignore all files ending .d
+*.d
+
+#ignore all files ending .so
+*.so
+
+#ignore all files ending ~
+*~
+
+#ignore all files ending .root
+*.root
+
+#ignore all files ending .pcm
+*.pcm
+
+#ignore all files ending .pdf
+*.pdf
+
+#ignore config file
+config.txt
+
+#ignore distGen output files
+outFile.txt
