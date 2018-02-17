@@ -1,0 +1,129 @@
+Addressing
+
+
+        REAL DATA AS THEY ARE WRITTEN ON THE DATA FILE
+        0 1  2 3  4 5  6 7  8 9  a b  c d  e f              ASCII representation
+
+000000: 0360 0000 0001 fe00 4141 4141 4141 4141             . ......AAAAAAAA
+000001: 4332 3557 .... .... .... .... .... ....        
+
+
+The first  byte has exadecimal value 0x03 and address 00. Four bits make up 0 (so they are 0000), the other four bits compose 3 (so they are 0011). 
+The second byte has exadecimal value 0x60 and address 01.
+
+Each line is made of 16 bytes.
+
+
+0360        First two bytes are the dimension of ONE event. You get a trigger and you acquire data for ONE event.
+0000 0001   four bytes are the number of the event
+
+fe00        two bytes: event validation (status Q). When you read a module you can have a Q if the data are good!
+
+            Each bit is an instrument. fe00 --> 1111111000000000 --> 7 instruments that answered 1, and the others 0.
+
+            What's the order of the instruments? The same as in the descriptions! (L'ottavo strumento è 0 perché non lo stiamo usando)
+
+4141....41  Caratteri a caso solo per finire la linea
+
+The description takes 64 bytes for each instrument. In the description: name, what it is (scaler...), how many channels it has, number of bits per channel. (number of really used bits) Es. 32 (24), perché il camac scrive word che sono lunghe al massimo 24 bit, mentre il vme 32.
+
+At the end of the decription, we start with data! So...starting from offset 00000210, we are reading data.
+
+Esempio: 16 x 32 (24) --> il primo strumento occupa 16 ch x 32 bits = 16 ch x 4 bytes = 64 bytes = 4 righe
+Quindi il primo strumento ha dati da offset 210 a offset 24f
+
+Secondo strumento: 12 ch x 32 bits = 12 ch x 4 bytes = 48 bytes = 3 righe
+Quindi il secondo strumento ha dati da offset 250 a offset 27f
+
+Se c'è la descrizione...c'è anche il numero di linee riservate per i dati che arrivano da quello strumento.
+
+
+Until we have a line with 16 bytes 4848 4848 4848 4848 4848 4848 4848 4848     HHHHHHHHHHHHHHHH
+
+After a line of HHHHHHHHHHHHHHHH....another event is written (info, description, data)!!!!
+
+
+
+
+
+Un canale del nostro scaler ci ha dato: 0000 0066 --> the number for the value of this channel is made by ALL the 8 "numbers" 0000 0066. These four bytes form the value. ATTENZIONE: il valore del counter is the binary number 00000000000000000000000001100110 = 64+32+4+2 = 102
+Quindi abbiamo un unico valore che prende 32 bits.
+In che ordine sono scritti i dati nella word?
+
+Depending on the computer that processes the data, the order of bytes can me MSB.....LSB or LSB....MSB!!! (It depends on the architecture of the processor).
+
+Endianess = Endianità
+There are two ways to store numbers: little indian and big indian
+Big Endian: MSB is on the left
+Little Endian: MSB is on the right
+
+INTEL --> Little Endian
+Byte3   Byte2   Byte1   Byte0
+00      0A      01      F2
+00      00      00      66
+LSB                     MSB
+
+
+Big Endian
+Byte0   Byte1   Byte2   Byte3
+F2      01      0A      00
+66      00      00      00
+MSB                     LSB
+
+
+Nei due casi è stato invertito l'ordine dei BYTES, non dei BITS.
+
+
+
+
+Ma nel file di dati è scritto in big indian. Mentre sui nostri computer si usa il little indian.
+
+
+Each byte in an element of an array. But we have to reverse before storing, because the data file is written in big endian, but our laptop reads in little endian. Dobbiamo invertire l'ordine dei bytes in ogni word (le words possono cambiare lunghezza).
+
+COME SI LEGGONO I DATI
+C'è una libreria chiamata endian.h (ci sono funzioni per invertire i bytes,...)
+
+GIORGIONE: carica un evento alla volta e lo processa; altri caricano tutti gli eventi nell'array e poi analizzano; ...
+
+fopen: function used to open a binary file and read the content. When you open a file, fopen(argv[1], "r") --> read mode
+pointer to a file
+read = fread(.....,pointer)
+
+
+poi il pc riprenderà a leggere da dove si era fermato (non torna indietro)...allora possiamo leggere un po' e analizzare, leggere un altro po' e analizzare,...
+
+Ci sono funzioni per tornare un po' indietro se vogliamo e per skippare qualosa.
+
+fclose(pointerToTheFile).
+
+All these functions are inside #include <stdio.h>
+
+
+man fopen
+ci dà il manuale da terminale!
+
+
+be16toh
+big endian 16 bit to host (the host architechture)
+converte da big indian a quello che è l'host processor (nel nostro caso little endian)
+
+struct --> dentro questa variabile ci sono questo, questo,...e hanno tipi diversi. lui nella memoria li mette tutti contigui.
+
+union --> sintassi analoga alla dichiarazione delle strutture, ma diciamo "ho una variabile a 16 bits" e po dico anche che questa cosa è un array da due bytes!!!!!!!!!!!!!!!! Poi, a seconda di come accediamo, possiamo accedere come a variabili di 16 bits o a un array di due elementi di 1 byte ciascuno
+
+
+tutorials point bravo :)
+
+
+
+
+
+
+
+
+
+
+
+
+
