@@ -16,18 +16,27 @@ The second byte has exadecimal value 0x60 and address 01.
 Each line is made of 16 bytes.
 
 
-0360        First two bytes are the dimension of ONE event. You get a trigger and you acquire data for ONE event.
-0000 0001   four bytes are the number of the event
+0360        First two bytes are the dimension of ONE event in bytes. You get a trigger and you acquire data for ONE event.
+            So in order to know how many lines belong to the same event, do as follows:
+            - 0360 (hex) --> convert to decimal; then you'll have the number of bytes (NBevt) of the whole event.
+            - each line has 16 bytes
+            - therefore: # of lines for each event = NBevt / 16
+
+
+0000 0001   four bytes are the number of the event in hex notation
+
 
 fe00        two bytes: event validation (status Q). When you read a module you can have a Q if the data are good!
+            ADD a check in the script to check if the event was read properly
 
             Each bit is an instrument. fe00 --> 1111111000000000 --> 7 instruments that answered 1, and the others 0.
-
             What's the order of the instruments? The same as in the descriptions! (L'ottavo strumento è 0 perché non lo stiamo usando)
 
 4141....41  Caratteri a caso solo per finire la linea
+            DOMANDA: è necessario che il programma si renda conto di questa stringa di riempimento?
 
-The description takes 64 bytes for each instrument. In the description: name, what it is (scaler...), how many channels it has, number of bits per channel. (number of really used bits) Es. 32 (24), perché il camac scrive word che sono lunghe al massimo 24 bit, mentre il vme 32.
+
+The description takes 64 bytes for each instrument (quindi 4 righe). In the description: name, what it is (scaler...), how many channels it has, number of bits per channel. (number of really used bits) Es. 32 (24), perché il camac scrive word che sono lunghe al massimo 24 bit, mentre il vme 32.
 
 At the end of the decription, we start with data! So...starting from offset 00000210, we are reading data.
 
@@ -55,7 +64,7 @@ In che ordine sono scritti i dati nella word?
 Depending on the computer that processes the data, the order of bytes can me MSB.....LSB or LSB....MSB!!! (It depends on the architecture of the processor).
 
 Endianess = Endianità
-There are two ways to store numbers: little indian and big indian
+There are two ways to store numbers: little endian and big endian
 Big Endian: MSB is on the left
 Little Endian: MSB is on the right
 
@@ -113,6 +122,59 @@ converte da big indian a quello che è l'host processor (nel nostro caso little 
 struct --> dentro questa variabile ci sono questo, questo,...e hanno tipi diversi. lui nella memoria li mette tutti contigui.
 
 union --> sintassi analoga alla dichiarazione delle strutture, ma diciamo "ho una variabile a 16 bits" e po dico anche che questa cosa è un array da due bytes!!!!!!!!!!!!!!!! Poi, a seconda di come accediamo, possiamo accedere come a variabili di 16 bits o a un array di due elementi di 1 byte ciascuno
+
+
+
+
+
+
+Il programma di acquisizione legge e scrive a buffer di 2 bytes, cioè a buffer di 16 bits.
+
+        /*
+         * mind the endianness: Intel is a little endian architecture.
+         *
+         * ex.
+         * uint32_t myVar = 0x12345678;
+         * uint8_t myArray[4];
+         *
+         * memcpy(&myArray[0], &myVar, sizeof(uint32_t));
+         *
+         * int i = 0;
+         * printf("myVar: 0x%x\n", myVar1);
+         * while (i < 4) {
+         *  printf("myArray[%d]: 0x%x\n", i, myArray[i]);
+         *  i++;
+         * }
+         *
+         * the output will be:
+         * myVar: 0x12345678
+         * myArray[0]: 0x78
+         * myArray[1]: 0x56
+         * myArray[2]: 0x34
+         * myArray[3]: 0x12
+         *
+         * this means that the bytes I copied from myVar where stored
+         * in reverse order (lowest Byte -0x78- at left and highest Byte -0x12- at right).
+         * This order is called "little endian".
+         *
+         * What we need is storing events in a "big endian" order.
+         * see: man -s3 endian
+         */
+
+
+
+PATTERN UNIT: scrive due word da 16 bits l'una, cioè due word sa 2 byte l'una (un buffer letto ciascuna, perché stiamo leggendo i moduli a 16 bits).
+Ma una riga nel file di dati è composta da 16 bytes, quindi dobbiamo riempire con altri 12 bytes: 0x4141 0x4141 0x4141 (in ASCII representation AAAAAAAAAAAA)
+
+
+
+
+
+
+
+
+
+
 
 
 tutorials point bravo :)
