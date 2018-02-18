@@ -9,12 +9,18 @@
 #endif
 
 
+Bool_t DBGMODE = kFALSE;
 
 //function declaration
 int readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile);
 
 
-void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat"){
+void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat", Bool_t DEBUG = kFALSE){
+
+  DBGMODE = DEBUG;
+  printf("[START    ] \n");
+  printf("[START    ] DATA file reading...\n");
+  printf("[START    ] \n");
   
   //open .dat DATA file
   FILE * dataFile;
@@ -27,9 +33,27 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat")
 
   const UInt_t MAXSIZE = 100;
   unsigned char hex[MAXSIZE] = "";
-  
-  int prova = readBuffer(hex, 2, dataFile);
-  //cout << prova << endl;
+
+  //Get event size
+  int evtSize  = readBuffer(hex, 2, dataFile); //[bytes]
+  printf("[READ DATA] Event size       : %d bytes \n", evtSize);
+
+  //Get event number
+  int evtNum   = readBuffer(hex, 4 , dataFile); //[bytes]
+  printf("[READ DATA] Event number     : %d \n", evtNum);
+
+  //Get event validation
+  int evtValid = readBuffer(hex, 2 , dataFile); //[bytes]
+  int validStr[16];
+  for(int i=15; i>=0; i--){
+    validStr[i] = evtValid%2;
+    evtValid = evtValid/2;
+  }
+  printf("[READ DATA] Event validation : ");
+  for(int i=0; i<16; i++){
+    printf("%i", validStr[i]);
+  }
+
 
 
   /*
@@ -124,20 +148,23 @@ int readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile){
   //size_t bufSize = 16;
   
   bytes = fread(hex, 1, bufSize, dataFile);
-  /*
+  /*NO!!!
   for (each = 0; each < bytes; each++) {
     printf ( "read this char as int %u and as hex %02x\n", hex[each], hex[each]);
     //cout << static_cast<uint16_t>(hex[each]) << endl;0
   }
   */
   
-  cout << "[INFO] number of bytes read up to now: " << bytes << endl;
-  printf( "[INFO] read hexadecimal buffer: ");
-  for (each = 0; each < bytes; each++) {
-    printf( "%02x", hex[each]);
-  }
-  cout << endl;
-  cout <<"[INFO] conversion of the " << bufSize << " bytes = " <<  be16toh(*(int *)hex) << endl;
+  if(DBGMODE){  
+    cout << "[INFO] number of bytes read up to now: " << bytes << endl;
+    printf( "[INFO] read hexadecimal buffer: 0x");
+    
+    for (each = 0; each < bytes; each++) {
+      printf( "%02x", hex[each]);
+      cout << endl;
+      cout <<"[INFO] conversion of the " << bufSize << " bytes = " <<  be16toh(*(int *)hex) << endl;
+    }
+  }  
+
   return be16toh(*(int *)hex);
-  //return 0.;
 }
