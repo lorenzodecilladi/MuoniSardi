@@ -92,6 +92,24 @@ Ma nel file di dati è scritto in big indian. Mentre sui nostri computer si usa 
 
 Each byte in an element of an array. But we have to reverse before storing, because the data file is written in big endian, but our laptop reads in little endian. Dobbiamo invertire l'ordine dei bytes in ogni word (le words possono cambiare lunghezza).
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 COME SI LEGGONO I DATI
 C'è una libreria chiamata endian.h (ci sono funzioni per invertire i bytes,...)
 
