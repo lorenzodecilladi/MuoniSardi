@@ -1,0 +1,89 @@
+MONDAY 19/02
+
+Crached on Sunday morning. Restarted on....
+
+main.C
+
+Definitions for each board.
+Base address is the fundamental building block. Two types: VME and CAMAC. VME modules (like our two scalers) use switches to setup the logical address. We can use 24 bit address (4 switches) or 32 bits (6 switches).
+Using 24 bits address: 0x00222300 (primi 00 sono le sue rotelline che non utilizziamo, poi 4 rotelline, poi due riservati). Qualche VME non ha le rotelline, ma ha un indirizzo fissato già all'interno (è comunque scritto nella documentazione).
+
+Interfaccia da VME a CAMAC --> costruisce l'indirizzo. Function that construct the logical address automathically using 4 parameters: the crate number, the N nymber (staion/slot in the camac crate), sub address fr channels and function.
+
+
+After the initialization...
+
+Initialization of the connection through the bridge, connecting the VME buses to the PC.
+
+Send Z and C signals to initialize the CAMAC odules and clear them to remove data remaining from prefvious run.
+
+Infinite loop unless interrupted by ENTER key
+
+Check for CORBO triggers.
+CORBO has 4 pairs of input/output --> all of them is checked.
+base address of the corbo module: 0x00BBBB00
++ address to look for the different channels:
+0x00 first  channel -> read and look whether it is equal to a certain number --> idf so, then we have a trigger, if not...no trigger
+0x02 second ch
+0x04 third  ch
+0x06 fourth ch
+
+
+then...
+
+read scaler c257 camac
+loop over channels (A is the channel number) VME_camac_command -> automathically combines all the pieces of the address: vme_camac.c file
+CR << 16 --> the crate number is shifted by 16 positions to the left
+
+
+lettura ripetuta per tutti i moduli
+
+
+
+then live monitoring histograms
+
+stop
+
+save
+
+
+
+
+
+
+Proviamo ad indirizzare il modulo PATTERN UNIT vme
+Guardare il manuale della pattern unit
+
+La pattern unit prende il segnale da S2 e un gate che arriva dal trigger
+
+Dobbiamo mettere il base address della pattern unit, che essend un modulo vme ha gli switch (rotelline). La pattern unit ha solo 4 switch (quindi il base addres è a 24 bit e non può essere a 32) --> 0x00444100
+il taglietto di sbieco indica dove stanno i bit meno significativi (in questo caso 1)
+
+Poi dobbiamo andare a leggere il pattern dei bit colpiti  la molteplicità dei canali colpiti. Per capire come si fa dobbiamo guardare il manuale
+
+--> full address per leggere i pattern register    : baseaddress + $22
+--> full address per leggere i pattern multiplicity: baseaddress + $24
+
+
+
+Lo scaler camac che usiamo si trova nella stazione/slot 9
+--> c257.baseAddress = 9;
+
+
+The camac branch driver controls all the camac modules --> we can send the clear signal to camac only once for all the crate.
+
+In questo caso, N, A ed F hanno dei particolari valori, non stiamo indirizzando fisicamente un modulo.
+Per generare camacZ --> N = 28 (oltre il numero di slot), A = 8, F = 26.
+Per generare camacC --> N = 28, A = 9, F = 26.
+
+Quindi, per dare un camacC:
+uint8_t N = 28;
+uint8_t A = 9;
+uint8_t F = 26;
+
+Il corrispondente indirizzo (address) è (vedi logbook)
+
+
+
+
+
