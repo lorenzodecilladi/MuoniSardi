@@ -16,14 +16,17 @@
 Bool_t DBGMODE = kFALSE;
 
 //function declaration
-int readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile);
+int  readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile);
+void skipBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile);
 
 
+//main
 void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat", int numEvtToAnalyse = 1000, Bool_t VERB = kFALSE, Bool_t DEBUG = kFALSE){
 
-
+  //open output file
   TFile *readFile = new TFile("readFile.root", "RECREATE" );
 
+  //open output tree
   TTree *readTree = new TTree("readTree", "Read data tree");
   int CLOCKch;
   int SCLinh;   //scaler inhibited
@@ -33,17 +36,15 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
   int ADCchSG;
   int pattReg[16];
   int pattMul[16];
-  readTree->Branch("CLOCKch" , &CLOCKch , "CLOCKch/I" );
-  readTree->Branch("SCLinh"  , &SCLinh  , "SCLinh/I"  );
-  readTree->Branch("SCLuninh", &SCLuninh, "SCLuninh/I");
-  readTree->Branch("TDCch"   , &TDCch   , "TDCch/I"   );
-  readTree->Branch("ADCchS1" , &ADCchS1 , "ADCchS1/I" );
-  readTree->Branch("ADCchSG" , &ADCchSG , "ADCchSG/I" );
+  readTree->Branch("CLOCKch" , &CLOCKch , "CLOCKch/I"    );
+  readTree->Branch("SCLinh"  , &SCLinh  , "SCLinh/I"     );
+  readTree->Branch("SCLuninh", &SCLuninh, "SCLuninh/I"   );
+  readTree->Branch("TDCch"   , &TDCch   , "TDCch/I"      );
+  readTree->Branch("ADCchS1" , &ADCchS1 , "ADCchS1/I"    );
+  readTree->Branch("ADCchSG" , &ADCchSG , "ADCchSG/I"    );
   readTree->Branch("pattReg" , &pattReg , "pattReg[16]/I");
   readTree->Branch("pattMul" , &pattMul , "pattMul[16]/I");
 
-  
-  
   DBGMODE = DEBUG;
   printf("[START    ]                     \n");
   printf("[START    ] DATA file reading...\n");
@@ -160,14 +161,16 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     
     //1. CAEN C257   - scaler             -> 16ch x 32 (24) bit = 512 bits = 64 bytes = 4   righe
     //               - channel 15
-    int skip1   = readBuffer(hex, 15*32/8, dataFile);
+    //int skip1   = readBuffer(hex, 15*32/8, dataFile);
+    skipBuffer(hex, 15*32/8, dataFile);
     int CLOCKch = readBuffer(hex,    32/8, dataFile);
     if(VERB)printf("[READ DATA] Scaler CLOCK     : %d periodi da 100 ns\n", CLOCKch);
     histCLOCK -> Fill(CLOCKch);
     
     //2. LeCroy 2251 - scaler             -> 12ch x 32 (24) bit = 384 bits = 48 bytes = 3   righe
     //               - NON USATO
-    int skip2   = readBuffer(hex, 12*32/8, dataFile);
+    //int skip2   = readBuffer(hex, 12*32/8, dataFile);
+    skipBuffer(hex, 12*32/8, dataFile);
     
     //3. V560N       - scaler             -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe
     //               - channel 0
@@ -253,9 +256,10 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
   }
 
   
-  histINHIB->Fill(0.5, nonInhib);
-  histINHIB->Fill(1.5, inhib);
-  histDEADT->Fill((nonInhib-inhib)/static_cast<float>(nonInhib));
+  Float_t deadTime = (nonInhib-inhib)/static_cast<Float_t>(nonInhib);
+  histINHIB -> Fill(0.5, nonInhib);
+  histINHIB -> Fill(1.5, inhib);
+  histDEADT -> Fill(deadTime);
   
   TCanvas *canvas = new TCanvas("canvas", "canvas", 200, 10, 600, 400);
   canvas->Divide(3,2);
@@ -293,61 +297,97 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
   readFile->Write();
   readFile->Close();
 
-
   //histADCSUM->DrawCopy("hist");
-
   
-  /*
-    UInt_t each = 0;
-    size_t bytes = 0;
-    size_t bufSize = 16;
-    
-    bytes = fread (hex, 1, bufSize, dataFile);
-    
+  fclose (dataFile);
+
+  cout << endl;
+  printf("[END      ]                         \n");
+  printf("[END      ] END file reading...     \n");
+  printf("[END      ] OUTPUT in readFile.root \n");
+  printf("[END      ]                         \n");
+  
+  return;
+}
+
+
+
+
+
+
+
+
+
+int readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile){
+  UInt_t each = 0;
+  size_t bytes = 0;
+  
+  bytes = fread(hex, 1, bufSize, dataFile);
+  
+  if(DBGMODE){
+    cout << "[         ]"                                                   << endl;
+    cout << "[DEBUG    ] number of bytes read up to now: " << bytes         << endl;
+    if(bytes == bufSize) cout << "[DEBUG    ] correct number of bytes read" << endl;
+    printf( "[DEBUG    ] read hexadecimal buffer: 0x");
     for (each = 0; each < bytes; each++) {
-    printf ( "read this char as int %u and as hex %x\n", hex[each], hex[each]);
-    //cout << static_cast<uint16_t>(hex[each]) << endl;0
+      printf( "%02x", hex[each]);
     }
-    
-    cout << "[INFO] number of bytes read up to now: " << bytes << endl;
-    
-    cout << "[    ] conversion of first 2 bytes = size of event = " <<  be16toh(*(int *)hex) << endl;
-  */
+    cout << endl;
+    if(bufSize <= 2)      cout <<"[DEBUG    ] 16conversion of the " << bufSize << " bytes to decimal = " <<  be16toh(*(int16_t *)hex) << endl;
+    else if(bufSize <= 4) cout <<"[DEBUG    ] 32conversion of the " << bufSize << " bytes to decimal = " <<  be32toh(*(int32_t *)hex) << endl;
+    else if(bufSize <= 8) cout <<"[DEBUG    ] 64conversion of the " << bufSize << " bytes to decimal = " <<  be64toh(*(int64_t *)hex) << endl;
+    else cout << "Buffer longer than 8 bytes" << endl;
+  }  
   
-  
-  
-  /*
-    size_t lSize = 2;
-    size_t result;
-    char * buffer;
-    
-    //allocate memory to contain the read bytes
-    buffer = (char*) malloc (sizeof(char)*lSize);
-    
-    //read bytes and copy them into the buffer
-    result = fread (buffer,1,lSize,dataFile);
-    
-    cout << buffer << endl;
-  */
-  
-  
-  
-  //1. capire quanto è grande un evento
-  //2. fare un ciclo sull'evento
-  //. leggere pezzo per pezzo per estrarre le info
-  
-  
-
-  
+  if     (bufSize <= 2) return be16toh(*(int *)hex);
+  else if(bufSize <= 4) return be32toh(*(int *)hex);
+  else if(bufSize <= 8) return be64toh(*(int *)hex);
+  else{if(DBGMODE) cout << "TOO BIG BUFFER" << endl;
+    return -1;}
+}
 
 
 
+void skipBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile){
+  UInt_t each = 0;
+  size_t bytes = 0;
+  
+  bytes = fread(hex, 1, bufSize, dataFile);
+  
+  if(DBGMODE){
+    cout << "[DEBUG    ] number of bytes skipped: " << bytes << endl;
+    if(bytes == bufSize) cout << "[DEBUG    ] correct number of bytes skipped" << endl;
+    printf( "[DEBUG    ] read hexadecimal buffer: 0x");
+    for (each = 0; each < bytes; each++) {
+      printf( "%02x", hex[each]);
+    }
+    cout << endl;
+  }  
+}
 
 
 
 
 
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   /*  
       union
       {
@@ -364,60 +404,27 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
       printf("0x%X  ->  0x%X\n", U.result, h_16bit);        // 0x1234  ->  0x3412
       }
   */
-  cout << endl;
+
+
+
+
   
-  
-  fclose (dataFile);
-  //free (buffer);
-  
-  return;
-}
+  /*
+    size_t lSize = 2;
+    size_t result;
+    char * buffer;
+    
+    //allocate memory to contain the read bytes
+    buffer = (char*) malloc (sizeof(char)*lSize);
+    
+    //read bytes and copy them into the buffer
+    result = fread (buffer,1,lSize,dataFile);
+    
+    cout << buffer << endl;
 
 
 
+    //free (buffer);
 
-
-
-
-
-
-int readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile){
-  UInt_t each = 0;
-  size_t bytes = 0;
-  //size_t bufSize = 16;
-  
-  bytes = fread(hex, 1, bufSize, dataFile);
-  /*NO!!!
-  for (each = 0; each < bytes; each++) {
-    printf ( "read this char as int %u and as hex %02x\n", hex[each], hex[each]);
-    //cout << static_cast<uint16_t>(hex[each]) << endl;0
-  }
   */
   
-  if(DBGMODE){
-    cout << "[         ]" << endl;
-    cout << "[DEBUG    ] number of bytes read up to now: " << bytes << endl;
-    if(bytes == bufSize) cout << "[DEBUG    ] correct number of bytes read" << endl;
-    printf( "[DEBUG    ] read hexadecimal buffer: 0x");
-    for (each = 0; each < bytes; each++) {
-      printf( "%02x", hex[each]);
-    }
-    cout << endl;
-    if(bufSize <= 2)      cout <<"[DEBUG    ] 16conversion of the " << bufSize << " bytes to decimal = " <<  be16toh(*(int16_t *)hex) << endl;
-    else if(bufSize <= 4) cout <<"[DEBUG    ] 32conversion of the " << bufSize << " bytes to decimal = " <<  be32toh(*(int32_t *)hex) << endl;
-    else if(bufSize <= 8) cout <<"[DEBUG    ] 64conversion of the " << bufSize << " bytes to decimal = " <<  be64toh(*(int64_t *)hex) << endl;
-    else cout << "Buffer longer than 8 bytes" << endl;
-  }  
-
-  if(bufSize <= 2) return be16toh(*(int *)hex);
-  else if(bufSize <= 4) return be32toh(*(int *)hex);
-  else if(bufSize <= 8) return be64toh(*(int *)hex);
-  else{
-    if(DBGMODE) cout << "TOO BIG BUFFER" << endl;
-    return -1;
-  }
-  
-}
-
-
-
