@@ -22,21 +22,27 @@ int readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile);
 void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat", int numEvtToAnalyse = 1000, Bool_t VERB = kFALSE, Bool_t DEBUG = kFALSE){
 
 
-  TFile *readFile = new TFile("readFile.root", "RECREATE");
+  TFile *readFile = new TFile("readFile.root", "RECREATE" );
 
   TTree *readTree = new TTree("readTree", "Read data tree");
+  int CLOCKch;
+  int SCLinh;   //scaler inhibited
+  int SCLuninh; //scaler not inhibited
+  int TDCch;
   int ADCchS1;
   int ADCchSG;
-  //ADCchS1 = new int[];
-  //ADCchSG = new int[];
-  readTree->Branch("ADCchS1", &ADCchS1, "ADCchS1/I");
-  readTree->Branch("ADCchSG", &ADCchSG, "ADCchSG/I");
+  readTree->Branch("CLOCKch" , &CLOCKch , "CLOCKch/I" );
+  readTree->Branch("SCLinh"  , &SCLinh  , "SCLinh/I"  );
+  readTree->Branch("SCLuninh", &SCLuninh, "SCLuninh/I");
+  readTree->Branch("TDCch"   , &TDCch   , "TDCch/I"   );
+  readTree->Branch("ADCchS1" , &ADCchS1 , "ADCchS1/I" );
+  readTree->Branch("ADCchSG" , &ADCchSG , "ADCchSG/I" );
   
   
   DBGMODE = DEBUG;
-  printf("[START    ] \n");
+  printf("[START    ]                     \n");
   printf("[START    ] DATA file reading...\n");
-  printf("[START    ] \n");
+  printf("[START    ]                     \n");
   
   //open .dat DATA file
   FILE * dataFile;
@@ -150,9 +156,9 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     //1. CAEN C257   - scaler             -> 16ch x 32 (24) bit = 512 bits = 64 bytes = 4   righe
     //               - channel 15
     int skip1   = readBuffer(hex, 15*32/8, dataFile);
-    int count1  = readBuffer(hex,    32/8, dataFile);
-    if(VERB)printf("[READ DATA] Scaler CLOCK     : %d periodi da 100 ns\n", count1);
-    histCLOCK -> Fill(count1);
+    int CLOCKch = readBuffer(hex,    32/8, dataFile);
+    if(VERB)printf("[READ DATA] Scaler CLOCK     : %d periodi da 100 ns\n", CLOCKch);
+    histCLOCK -> Fill(CLOCKch);
     
     //2. LeCroy 2251 - scaler             -> 12ch x 32 (24) bit = 384 bits = 48 bytes = 3   righe
     //               - NON USATO
@@ -160,24 +166,24 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     
     //3. V560N       - scaler             -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe
     //               - channel 0
-    int count3  = readBuffer(hex,    32/8, dataFile);
-    nonInhib = count3;
+    int SCLuninh= readBuffer(hex,    32/8, dataFile);
+    nonInhib    = SCLuninh;
     int skip3   = readBuffer(hex, 15*32/8, dataFile);
-    if(VERB)printf("[READ DATA] Scaler non inibit: %d \n", count3);
+    if(VERB)printf("[READ DATA] Scaler non inibit: %d \n", SCLuninh);
     
     //4. V560N       - scaler inhibited   -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe
     //               - channel 0
-    int count4  = readBuffer(hex,    32/8, dataFile);
-    inhib    = count4;
+    int SCLinh  = readBuffer(hex,    32/8, dataFile);
+    inhib       = SCLinh;
     int skip4   = readBuffer(hex, 15*32/8, dataFile);
-    if(VERB)printf("[READ DATA] Scaler inibito   : %d \n", count4);
+    if(VERB)printf("[READ DATA] Scaler inibito   : %d \n", SCLinh);
     
     //5. 2228A       - tdc                -> 8 ch x 16 (11) bit = 128 bits = 16 bytes = 1   riga
     //               - channel 7
     int skip5   = readBuffer(hex,  7*16/8, dataFile);
-    int count5  = readBuffer(hex,    16/8, dataFile);
-    if(VERB)printf("[READ DATA] TDC channel      : %d \n", count5);
-    histTIME->Fill(count5);
+    int TDCch  = readBuffer(hex,    16/8, dataFile);
+    if(VERB)printf("[READ DATA] TDC channel      : %d \n", TDCch);
+    histTIME->Fill(TDCch);
     
     //6. 2249A       - adc                -> 12ch x 16 (10) bit = 192 bits = 24 bytes = 1.5 righe
     //                                    + 8 bytes padding             =  8 bytes = 0.5 righe
@@ -188,16 +194,16 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     //                                    + 8 Bytes padding             =  8 bytes = 0.5 righe
     //               - channels 10, 11
     int skip7a  = readBuffer(hex, 10*16/8, dataFile);
-    int count7a = readBuffer(hex,    16/8, dataFile);
-    int count7b = readBuffer(hex,    16/8, dataFile);
-    ADCchS1 = count7a;
-    ADCchSG = count7b;
-    if(VERB)printf("[READ DATA] ADC (input S1)   : %d \n", count7a);
-    if(VERB)printf("[READ DATA] ADC (input SG)   : %d \n", count7b);
+    int ADCchS1 = readBuffer(hex,    16/8, dataFile);
+    int ADCchSG = readBuffer(hex,    16/8, dataFile);
+    ADCchS1 = ADCchS1;
+    ADCchSG = ADCchSG;
+    if(VERB)printf("[READ DATA] ADC (input S1)   : %d \n", ADCchS1);
+    if(VERB)printf("[READ DATA] ADC (input SG)   : %d \n", ADCchSG);
     int skip7b  = readBuffer(hex,       8, dataFile);
-    histADC1  ->Fill(count7a);
-    histADCG  ->Fill(count7b);
-    histADCSUM->Fill(count7a+count7b);
+    histADC1  ->Fill(ADCchS1);
+    histADCG  ->Fill(ADCchSG);
+    histADCSUM->Fill(ADCchS1+ADCchSG);
     
     
     //8. V259N       - patter unit        -> 16 bit pattern reg. + 16 bit mul = 4 bytes = 0.25 riga
@@ -254,41 +260,40 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
   canvas->Divide(3,2);
   canvas->cd(1);
   gPad->SetLogy();
-  histTIME->Draw("hist");
+  histTIME->DrawCopy("hist");
   canvas->cd(2);
   gPad->SetLogy();
-  histCLOCK ->Draw("hist");
+  histCLOCK ->DrawCopy("hist");
 
   canvas->cd(3);
   gPad->Divide(2,1);
   gPad->cd(1);
   histINHIB->SetMinimum(0.);
-  histINHIB->Draw("hist");
+  histINHIB->DrawCopy("hist");
   canvas->cd(3);
   gPad->cd(2);
-  histDEADT->Draw("hist");
+  histDEADT->DrawCopy("hist");
 
   canvas->cd(4);
-  histADC1->Draw("hist");
+  histADC1->DrawCopy("hist");
   canvas->cd(5);
-  histADCG->Draw("hist");
+  histADCG->DrawCopy("hist");
 
   canvas->cd(6);
   gPad->Divide(2,1);
   gPad->cd(1);
-  histPATT->Draw("hist");
+  histPATT->DrawCopy("hist");
   canvas->cd(6);
   gPad->cd(2);
-  histQ->Draw("hist");
+  histQ->DrawCopy("hist");
 
   
-  //readTree->Close();
   canvas->Write();
   readFile->Write();
   readFile->Close();
 
-  
-  //histADCSUM->Draw("hist");
+
+  //histADCSUM->DrawCopy("hist");
 
   
   /*
