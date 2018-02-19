@@ -52,7 +52,7 @@ void skipBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile);
 
 
 //main
-void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", int numEvtToAnalyse=1000, Bool_t VERB=kFALSE, Bool_t DEBUG=kFALSE){
+void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", UInt_t numEvtToAnalyse=1000, Bool_t VERB=kFALSE, Bool_t DEBUG=kFALSE){
 
   //open output file
   TFile *readFile = new TFile("readFile.root", "RECREATE" );
@@ -106,15 +106,16 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", i
   TH1F *histDEADT = new TH1F("histDEADT", "histDEADTIME", 101,-0.005,   1.005);
   TH1F *histPATT  = new TH1F("histPATT" , "histPATT"    ,  32,   0.5,    32.5);
   
-  
-  //while(fgetc(dataFile) != EOF){
-  for(int evtCounter=0; evtCounter<numEvtToAnalyse; evtCounter++){
-  
+
+  UInt_t evtCounter = 0;
+
+  //loop over events
+  while(evtCounter < numEvtToAnalyse && !feof(dataFile)) {
     if(VERB){
       printf("[         ] --------------------------\n");
       printf("[READ EVT ] Event %i\n", evtCounter+1);
     }
-  
+    
     //Get event size
     int evtSize  = readBuffer(hex, 2, dataFile); //[bytes]
     if(VERB)printf("[READ DATA] Event size       : %d bytes \n", evtSize);
@@ -232,7 +233,13 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", i
     if(VERB)printf("\n");
     
     readTree->Fill();
-  }
+    evtCounter++;
+  }//end event loop
+  
+  cout << "[END      ] "                                  << endl;
+  cout << "[END      ] End-of-File reached."              << endl;
+  cout << "[END      ] Read " << evtCounter << " events." << endl;
+  cout << "[END      ] "                                  << endl;
   
   //close data file
   fclose(dataFile);
@@ -272,14 +279,9 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", i
   canvas   -> Write();
   readFile -> Write();
   readFile -> Close();
-
   
   //histADCsum->DrawCopy("hist");
   
-
-
-  cout << endl;
-  printf("[END      ]                         \n");
   printf("[END      ] END file reading...     \n");
   printf("[END      ] OUTPUT in readFile.root \n");
   printf("[END      ]                         \n");
