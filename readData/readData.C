@@ -5,6 +5,7 @@
 #include "TString.h"
 #include <Riostream.h>
 #include "TStopwatch.h"
+#include "TCanvas.h"
 #include "TH1.h"
 
 #endif
@@ -16,7 +17,7 @@ Bool_t DBGMODE = kFALSE;
 int readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile);
 
 
-void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat", Bool_t VERB = kFALSE, Bool_t DEBUG = kFALSE){
+void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat", int numEvtToAnalyse = 1000, Bool_t VERB = kFALSE, Bool_t DEBUG = kFALSE){
 
   DBGMODE = DEBUG;
   printf("[START    ] \n");
@@ -35,13 +36,13 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
   const UInt_t MAXSIZE = 100;
   unsigned char hex[MAXSIZE] = "";
 
-  TH1I *histADC  = new TH1I("histADC" , "histADC" ,  2048,  0  ,  2048);
-  TH1F *histTIME = new TH1F("histTIME", "histTIME", 10001, -0.5, 10001);
+  TH1I *histADC  = new TH1I("histADC" , "histADC" , 501,  0  , 10000.5);
+  TH1F *histTIME = new TH1F("histTIME", "histTIME", 10001, -0.5, 10000.5);
   
   
 
   //while(fgetc(dataFile) != EOF){
-  for(int evtCounter=0; evtCounter<2000; evtCounter++){
+  for(int evtCounter=0; evtCounter<numEvtToAnalyse; evtCounter++){
     
     if(VERB)printf("[READ EVT ] Event %i\n", evtCounter+1);
     
@@ -84,24 +85,25 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     
     //-- MODULES -----
     //
-    //1. CAEN C257   - scaler             -> 16ch x 32 (24) bit = 512 bits = 64 bytes = 4   righe
+    //1. CAEN C257   - scaler             -> 16ch x 32 (24) bit = 512 bits = 64 bytes = 4   righe  --> dal clock
     //               - channel 15
+    //               - slot/station 9
     //
-    //2. LeCroy 2251 - scaler             -> 12ch x 32 (24) bit = 384 bits = 48 bytes = 3   righe
+    //2. LeCroy 2251 - scaler             -> 12ch x 32 (24) bit = 384 bits = 48 bytes = 3   righe  --> non usato 
     //
-    //3. V560N       - scaler             -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe
+    //3. V560N       - scaler             -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe  --> channel 0
     //
-    //4. V560N       - scaler inhibited   -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe
+    //4. V560N       - scaler inhibited   -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe  --> channel 0
     //
-    //5. 2228A       - tdc                -> 8 ch x 16 (11) bit = 128 bits = 16 bytes = 1   riga
+    //5. 2228A       - tdc                -> 8 ch x 16 (11) bit = 128 bits = 16 bytes = 1   riga   --> channel 7
     //
-    //6. 2249A       - adc                -> 12ch x 16 (10) bit = 192 bits = 24 bytes = 1.5 righe
+    //6. 2249A       - adc                -> 12ch x 16 (10) bit = 192 bits = 24 bytes = 1.5 righe  --> non usato
     //                                    + 8 bytes padding             =  8 bytes = 0.5 righe 
     //
-    //7. 2249W       - adc                -> 12ch x 16 (11) bit = 192 bits = 24 bytes = 1.5 righe
+    //7. 2249W       - adc                -> 12ch x 16 (11) bit = 192 bits = 24 bytes = 1.5 righe  --> channel 10, 11
     //                                    + 8 Bytes padding             =  8 bytes = 0.5 righe
     //
-    //8. V259N       - patter unit        -> 16 bit pattern reg. + 16 bit mul = 4 bytes = 0.25 riga
+    //8. V259N       - patter unit        -> 16 bit pattern reg. + 16 bit mul = 4 bytes = 0.25 riga  --> channel 1 (primo bit)
     //                                    Non scritto nella descrizione (perché già esauriti i 64 bytes a disposizione),
     //                                    ma ci sono sicuramente altri 12 bytes di riempimento = 0.75 riga
     //
@@ -195,8 +197,12 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     if(VERB)printf("\n");
   }
 
-  //histTIME->DrawCopy("hist");
-  histADC ->DrawCopy("hist");
+  TCanvas *canvas = new TCanvas("canvas", "canvas", 200, 10, 600, 400);
+  canvas->Divide(2);
+  canvas->cd(1);
+  histTIME->Draw("hist");
+  canvas->cd(2);
+  histADC ->Draw("hist");
   
   /*
     UInt_t each = 0;
