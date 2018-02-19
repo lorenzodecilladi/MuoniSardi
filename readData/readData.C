@@ -161,7 +161,6 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     
     //1. CAEN C257   - scaler             -> 16ch x 32 (24) bit = 512 bits = 64 bytes = 4   righe
     //               - channel 15
-    //int skip1   = readBuffer(hex, 15*32/8, dataFile);
     skipBuffer(hex, 15*32/8, dataFile);
     int CLOCKch = readBuffer(hex,    32/8, dataFile);
     if(VERB)printf("[READ DATA] Scaler CLOCK     : %d periodi da 100 ns\n", CLOCKch);
@@ -169,26 +168,25 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     
     //2. LeCroy 2251 - scaler             -> 12ch x 32 (24) bit = 384 bits = 48 bytes = 3   righe
     //               - NON USATO
-    //int skip2   = readBuffer(hex, 12*32/8, dataFile);
     skipBuffer(hex, 12*32/8, dataFile);
     
     //3. V560N       - scaler             -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe
     //               - channel 0
     int SCLuninh= readBuffer(hex,    32/8, dataFile);
     nonInhib    = SCLuninh;
-    int skip3   = readBuffer(hex, 15*32/8, dataFile);
+    skipBuffer(hex, 15*32/8, dataFile);
     if(VERB)printf("[READ DATA] Scaler non inibit: %d \n", SCLuninh);
     
     //4. V560N       - scaler inhibited   -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe
     //               - channel 0
     int SCLinh  = readBuffer(hex,    32/8, dataFile);
     inhib       = SCLinh;
-    int skip4   = readBuffer(hex, 15*32/8, dataFile);
+    skipBuffer(hex, 15*32/8, dataFile);
     if(VERB)printf("[READ DATA] Scaler inibito   : %d \n", SCLinh);
     
     //5. 2228A       - tdc                -> 8 ch x 16 (11) bit = 128 bits = 16 bytes = 1   riga
     //               - channel 7
-    int skip5   = readBuffer(hex,  7*16/8, dataFile);
+    skipBuffer(hex,  7*16/8, dataFile);
     int TDCch  = readBuffer(hex,    16/8, dataFile);
     if(VERB)printf("[READ DATA] TDC channel      : %d \n", TDCch);
     histTIME->Fill(TDCch);
@@ -196,17 +194,17 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     //6. 2249A       - adc                -> 12ch x 16 (10) bit = 192 bits = 24 bytes = 1.5 righe
     //                                    + 8 bytes padding             =  8 bytes = 0.5 righe
     //               - NON USATO
-    int skip6   = readBuffer(hex, 12*16/8 + 8, dataFile);
+    skipBuffer(hex, 12*16/8 + 8, dataFile);
     
     //7. 2249W       - adc                -> 12ch x 16 (11) bit = 192 bits = 24 bytes = 1.5 righe
     //                                    + 8 Bytes padding             =  8 bytes = 0.5 righe
     //               - channels 10, 11
-    int skip7a  = readBuffer(hex, 10*16/8, dataFile);
+    skipBuffer(hex, 10*16/8, dataFile);
     int ADCchS1 = readBuffer(hex,    16/8, dataFile);
     int ADCchSG = readBuffer(hex,    16/8, dataFile);
     if(VERB)printf("[READ DATA] ADC (input S1)   : %d \n", ADCchS1);
     if(VERB)printf("[READ DATA] ADC (input SG)   : %d \n", ADCchSG);
-    int skip7b  = readBuffer(hex,       8, dataFile);
+    skipBuffer(hex,       8, dataFile);
     histADC1  ->Fill(ADCchS1);
     histADCG  ->Fill(ADCchSG);
     histADCSUM->Fill(ADCchS1+ADCchSG);
@@ -236,7 +234,7 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
 	printf("%i", pattMul[i]);
       }
     }
-    int skip8  = readBuffer(hex,      12, dataFile);
+    skipBuffer(hex,      12, dataFile);
     for(int i=0; i<16; i++){
       histPATT->Fill(i+1, pattReg[i]);
       histPATT->Fill(i+16+1, pattMul[i]);
