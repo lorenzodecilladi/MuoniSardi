@@ -7,6 +7,8 @@
 #include "TStopwatch.h"
 #include "TCanvas.h"
 #include "TH1.h"
+#include "TFile.h"
+#include "TTree.h"
 
 #endif
 
@@ -19,6 +21,18 @@ int readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile);
 
 void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat", int numEvtToAnalyse = 1000, Bool_t VERB = kFALSE, Bool_t DEBUG = kFALSE){
 
+
+  TFile *readFile = new TFile("readFile.root", "RECREATE");
+
+  TTree *readTree = new TTree("readTree", "Read data tree");
+  int ADCchS1;
+  int ADCchSG;
+  //ADCchS1 = new int[];
+  //ADCchSG = new int[];
+  readTree->Branch("ADCchS1", &ADCchS1, "ADCchS1/I");
+  readTree->Branch("ADCchSG", &ADCchSG, "ADCchSG/I");
+  
+  
   DBGMODE = DEBUG;
   printf("[START    ] \n");
   printf("[START    ] DATA file reading...\n");
@@ -33,34 +47,47 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
   }
 
 
-  const UInt_t MAXSIZE = 100;
+  const UInt_t MAXSIZE = 150;
   unsigned char hex[MAXSIZE] = "";
 
-  TH1I *histADC  = new TH1I("histADC" , "histADC" , 501,  0  , 10000.5);
-  TH1F *histTIME = new TH1F("histTIME", "histTIME", 10001, -0.5, 10000.5);
+  TH1F *histQ     = new TH1F("histQ   "  , "histQ   "   ,  16,  -0.5,    15.5);
+  TH1F *histCLOCK = new TH1F("histCLOCK" , "histCLOCK"  , 110,  -0.5,   110.5);
+  TH1F *histADC1  = new TH1F("histADC1"  , "histADC1"   ,2048,  -0.5,  2048.5);
+  TH1F *histADCG  = new TH1F("histADCG"  , "histADCG"   ,2048,  -0.5,  2048.5);
+  TH1F *histADCSUM= new TH1F("histADCSUM", "histADCSUM" ,2048,  -0.5,  2048.5);
+  TH1F *histTIME  = new TH1F("histTIME"  , "histTIME"   , 401,  -0.5,  4000.5);
+  
+  int nonInhib = 0;
+  int inhib    = 0;
+  TH1F *histINHIB = new TH1F("histINHIB", "histINHIB"   ,   2,   0. ,     2. );
+  TH1F *histDEADT = new TH1F("histDEADT", "histDEADTIME", 101,-0.005,   1.005);
+  TH1F *histPATT  = new TH1F("histPATT" , "histPATT"    ,  32,   0.5,    32.5);
   
   
-
   //while(fgetc(dataFile) != EOF){
   for(int evtCounter=0; evtCounter<numEvtToAnalyse; evtCounter++){
-    
-    if(VERB)printf("[READ EVT ] Event %i\n", evtCounter+1);
-    
+  
+    if(VERB){
+      printf("[         ] --------------------------\n");
+      printf("[READ EVT ] Event %i\n", evtCounter+1);
+    }
+  
     //Get event size
     int evtSize  = readBuffer(hex, 2, dataFile); //[bytes]
     if(VERB)printf("[READ DATA] Event size       : %d bytes \n", evtSize);
-    
+  
     //Get event number
     int evtNum   = readBuffer(hex, 4 , dataFile); //[bytes]
     if(VERB)printf("[READ DATA] Event number     : %d \n", evtNum);
     if(DBGMODE){
-    printf("[READ DATA] Event number     : 0x");
-    for (int j=0; j<4; j++){
-      printf( "%02x", hex[j]);
+      printf("[READ DATA] Event number     : 0x");
+      for (int j=0; j<4; j++){
+	printf( "%02x", hex[j]);
+      }
+      cout << endl;
     }
-    cout << endl;}
-    
-    //Get event validation
+
+    //Get event validation --> TO DO: skip events not passing event validation
     int evtValid = readBuffer(hex, 2 , dataFile); //[bytes]
     int validStr[16];
     for(int i=15; i>=0; i--){
@@ -74,6 +101,10 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
       }
       printf("\n");
     }
+    for(int i=0; i<16; i++){
+      histQ->Fill(i,validStr[i]);
+    }
+
     //Skip filling characters
     int fill1 = readBuffer(hex, 8 , dataFile); //[bytes]
     
@@ -82,6 +113,7 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     for(int i=0; i<9; i++){
       int descr = readBuffer(hex, 64, dataFile);
     }
+    
     
     //-- MODULES -----
     //
@@ -96,6 +128,7 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     //4. V560N       - scaler inhibited   -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe  --> channel 0
     //
     //5. 2228A       - tdc                -> 8 ch x 16 (11) bit = 128 bits = 16 bytes = 1   riga   --> channel 7
+    //               - 
     //
     //6. 2249A       - adc                -> 12ch x 16 (10) bit = 192 bits = 24 bytes = 1.5 righe  --> non usato
     //                                    + 8 bytes padding             =  8 bytes = 0.5 righe 
@@ -118,7 +151,8 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     //               - channel 15
     int skip1   = readBuffer(hex, 15*32/8, dataFile);
     int count1  = readBuffer(hex,    32/8, dataFile);
-    if(VERB)printf("[READ DATA] Count 1          : %d \n", count1);
+    if(VERB)printf("[READ DATA] Scaler CLOCK     : %d periodi da 100 ns\n", count1);
+    histCLOCK -> Fill(count1);
     
     //2. LeCroy 2251 - scaler             -> 12ch x 32 (24) bit = 384 bits = 48 bytes = 3   righe
     //               - NON USATO
@@ -127,20 +161,22 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     //3. V560N       - scaler             -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe
     //               - channel 0
     int count3  = readBuffer(hex,    32/8, dataFile);
+    nonInhib = count3;
     int skip3   = readBuffer(hex, 15*32/8, dataFile);
-    if(VERB)printf("[READ DATA] Count 3          : %d \n", count3);
+    if(VERB)printf("[READ DATA] Scaler non inibit: %d \n", count3);
     
     //4. V560N       - scaler inhibited   -> 16ch x 32      bit = 512 bits = 64 bytes = 4   righe
     //               - channel 0
     int count4  = readBuffer(hex,    32/8, dataFile);
+    inhib    = count4;
     int skip4   = readBuffer(hex, 15*32/8, dataFile);
-    if(VERB)printf("[READ DATA] Count 4          : %d \n", count4);
+    if(VERB)printf("[READ DATA] Scaler inibito   : %d \n", count4);
     
     //5. 2228A       - tdc                -> 8 ch x 16 (11) bit = 128 bits = 16 bytes = 1   riga
     //               - channel 7
     int skip5   = readBuffer(hex,  7*16/8, dataFile);
     int count5  = readBuffer(hex,    16/8, dataFile);
-    if(VERB)printf("[READ DATA] Count 5          : %d \n", count5);
+    if(VERB)printf("[READ DATA] TDC channel      : %d \n", count5);
     histTIME->Fill(count5);
     
     //6. 2249A       - adc                -> 12ch x 16 (10) bit = 192 bits = 24 bytes = 1.5 righe
@@ -154,21 +190,26 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     int skip7a  = readBuffer(hex, 10*16/8, dataFile);
     int count7a = readBuffer(hex,    16/8, dataFile);
     int count7b = readBuffer(hex,    16/8, dataFile);
-    if(VERB)printf("[READ DATA] Count 7a         : %d \n", count7a);
-    if(VERB)printf("[READ DATA] Count 7b         : %d \n", count7b);
+    ADCchS1 = count7a;
+    ADCchSG = count7b;
+    if(VERB)printf("[READ DATA] ADC (input S1)   : %d \n", count7a);
+    if(VERB)printf("[READ DATA] ADC (input SG)   : %d \n", count7b);
     int skip7b  = readBuffer(hex,       8, dataFile);
-    histADC->Fill(count7a+count7b);
+    histADC1  ->Fill(count7a);
+    histADCG  ->Fill(count7b);
+    histADCSUM->Fill(count7a+count7b);
+    
     
     //8. V259N       - patter unit        -> 16 bit pattern reg. + 16 bit mul = 4 bytes = 0.25 riga
     //                                    Non scritto nella descrizione (perché già esauriti i 64 bytes a disposizione),
     //                                    ma ci sono sicuramente altri 12 bytes di riempimento = 0.75 riga
     int count8a = readBuffer(hex,    16/8, dataFile);
     int count8b = readBuffer(hex,    16/8, dataFile);
-    int pattRegInt = count8a;
-    int pattMultInt = count8a;
+    int pattRegInt  = count8a;
+    int pattMultInt = count8b;
     int pattReg[16];
     int pattMult[16];
-    for(int i=15; i>=0; i--){
+    for(int i=0; i<16; i++){
       pattReg[i] = pattRegInt%2;
       pattRegInt = pattRegInt/2;
       pattMult[i] = pattMultInt%2;
@@ -186,6 +227,11 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
       }
     }
     int skip8  = readBuffer(hex,      12, dataFile);
+    for(int i=0; i<16; i++){
+      histPATT->Fill(i+1, pattReg[i]);
+      histPATT->Fill(i+16+1, pattMult[i]);
+    }
+
     
     //9. C211        - programmable delay -> 16ch x  8      bit = 128 bits = 16 bytes = 1   riga
     //               - NON USATO
@@ -195,14 +241,55 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     int skip10 = readBuffer(hex,      16, dataFile);
     
     if(VERB)printf("\n");
+
+    readTree->Fill();
   }
 
+  
+  histINHIB->Fill(0.5, nonInhib);
+  histINHIB->Fill(1.5, inhib);
+  histDEADT->Fill((nonInhib-inhib)/static_cast<float>(nonInhib));
+  
   TCanvas *canvas = new TCanvas("canvas", "canvas", 200, 10, 600, 400);
-  canvas->Divide(2);
+  canvas->Divide(3,2);
   canvas->cd(1);
+  gPad->SetLogy();
   histTIME->Draw("hist");
   canvas->cd(2);
-  histADC ->Draw("hist");
+  gPad->SetLogy();
+  histCLOCK ->Draw("hist");
+
+  canvas->cd(3);
+  gPad->Divide(2,1);
+  gPad->cd(1);
+  histINHIB->SetMinimum(0.);
+  histINHIB->Draw("hist");
+  canvas->cd(3);
+  gPad->cd(2);
+  histDEADT->Draw("hist");
+
+  canvas->cd(4);
+  histADC1->Draw("hist");
+  canvas->cd(5);
+  histADCG->Draw("hist");
+
+  canvas->cd(6);
+  gPad->Divide(2,1);
+  gPad->cd(1);
+  histPATT->Draw("hist");
+  canvas->cd(6);
+  gPad->cd(2);
+  histQ->Draw("hist");
+
+  
+  //readTree->Close();
+  canvas->Write();
+  readFile->Write();
+  readFile->Close();
+
+  
+  //histADCSUM->Draw("hist");
+
   
   /*
     UInt_t each = 0;
@@ -288,8 +375,6 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
 
 
 
-
-
 int readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile){
   UInt_t each = 0;
   size_t bytes = 0;
@@ -306,18 +391,21 @@ int readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile){
   if(DBGMODE){
     cout << "[         ]" << endl;
     cout << "[DEBUG    ] number of bytes read up to now: " << bytes << endl;
+    if(bytes == bufSize) cout << "[DEBUG    ] correct number of bytes read" << endl;
     printf( "[DEBUG    ] read hexadecimal buffer: 0x");
-    
     for (each = 0; each < bytes; each++) {
       printf( "%02x", hex[each]);
     }
     cout << endl;
-    cout <<"[DEBUG    ] conversion of the " << bufSize << " bytes to decimal = " <<  be16toh(*(int *)hex) << endl;
+    if(bufSize <= 2)      cout <<"[DEBUG    ] 16conversion of the " << bufSize << " bytes to decimal = " <<  be16toh(*(int16_t *)hex) << endl;
+    else if(bufSize <= 4) cout <<"[DEBUG    ] 32conversion of the " << bufSize << " bytes to decimal = " <<  be32toh(*(int32_t *)hex) << endl;
+    else if(bufSize <= 8) cout <<"[DEBUG    ] 64conversion of the " << bufSize << " bytes to decimal = " <<  be64toh(*(int64_t *)hex) << endl;
+    else cout << "Buffer longer than 8 bytes" << endl;
   }  
 
   if(bufSize <= 2) return be16toh(*(int *)hex);
-  if(bufSize <= 4) return be32toh(*(int *)hex);
-  if(bufSize <= 8) return be64toh(*(int *)hex);
+  else if(bufSize <= 4) return be32toh(*(int *)hex);
+  else if(bufSize <= 8) return be64toh(*(int *)hex);
   else{
     if(DBGMODE) cout << "TOO BIG BUFFER" << endl;
     return -1;
