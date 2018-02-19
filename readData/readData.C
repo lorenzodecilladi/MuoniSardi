@@ -77,9 +77,9 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", U
   readTree->Branch("pattMul" , &pattMul , "pattMul[16]/I");
 
   DBGMODE = DEBUG;
-  printf("[START    ]                     \n");
-  printf("[START    ] DATA file reading...\n");
-  printf("[START    ]                     \n");
+  printf("[START    ]                           \n");
+  printf("[START    ] START data file reading...\n");
+  printf("[START    ]                           \n");
   
   //open .dat DATA file
   FILE * dataFile;
@@ -282,7 +282,7 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", U
   
   //histADCsum->DrawCopy("hist");
   
-  printf("[END      ] END file reading...     \n");
+  printf("[END      ] END data file reading...     \n");
   printf("[END      ] OUTPUT in readFile.root \n");
   printf("[END      ]                         \n");
   
