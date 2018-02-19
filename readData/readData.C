@@ -31,12 +31,17 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
   int TDCch;
   int ADCchS1;
   int ADCchSG;
+  int pattReg[16];
+  int pattMul[16];
   readTree->Branch("CLOCKch" , &CLOCKch , "CLOCKch/I" );
   readTree->Branch("SCLinh"  , &SCLinh  , "SCLinh/I"  );
   readTree->Branch("SCLuninh", &SCLuninh, "SCLuninh/I");
   readTree->Branch("TDCch"   , &TDCch   , "TDCch/I"   );
   readTree->Branch("ADCchS1" , &ADCchS1 , "ADCchS1/I" );
   readTree->Branch("ADCchSG" , &ADCchSG , "ADCchSG/I" );
+  readTree->Branch("pattReg" , &pattReg , "pattReg[16]/I");
+  readTree->Branch("pattMul" , &pattMul , "pattMul[16]/I");
+
   
   
   DBGMODE = DEBUG;
@@ -196,8 +201,6 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     int skip7a  = readBuffer(hex, 10*16/8, dataFile);
     int ADCchS1 = readBuffer(hex,    16/8, dataFile);
     int ADCchSG = readBuffer(hex,    16/8, dataFile);
-    ADCchS1 = ADCchS1;
-    ADCchSG = ADCchSG;
     if(VERB)printf("[READ DATA] ADC (input S1)   : %d \n", ADCchS1);
     if(VERB)printf("[READ DATA] ADC (input SG)   : %d \n", ADCchSG);
     int skip7b  = readBuffer(hex,       8, dataFile);
@@ -206,20 +209,18 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     histADCSUM->Fill(ADCchS1+ADCchSG);
     
     
-    //8. V259N       - patter unit        -> 16 bit pattern reg. + 16 bit mul = 4 bytes = 0.25 riga
+    //8. V259N       - pattern unit       -> 16 bit pattern reg. + 16 bit mul = 4 bytes = 0.25 riga
     //                                    Non scritto nella descrizione (perché già esauriti i 64 bytes a disposizione),
     //                                    ma ci sono sicuramente altri 12 bytes di riempimento = 0.75 riga
-    int count8a = readBuffer(hex,    16/8, dataFile);
-    int count8b = readBuffer(hex,    16/8, dataFile);
-    int pattRegInt  = count8a;
-    int pattMultInt = count8b;
+    int pattRegInt = readBuffer(hex,    16/8, dataFile);
+    int pattMulInt = readBuffer(hex,    16/8, dataFile);
     int pattReg[16];
-    int pattMult[16];
+    int pattMul[16];
     for(int i=0; i<16; i++){
       pattReg[i] = pattRegInt%2;
       pattRegInt = pattRegInt/2;
-      pattMult[i] = pattMultInt%2;
-      pattMultInt = pattMultInt/2;
+      pattMul[i] = pattMulInt%2;
+      pattMulInt = pattMulInt/2;
     }
     if(VERB){
       printf("[READ DATA] Pattern register : ");
@@ -229,13 +230,13 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
       printf("\n");
       printf("[READ DATA] Pattern multipl. : ");
       for(int i=0; i<16; i++){
-	printf("%i", pattMult[i]);
+	printf("%i", pattMul[i]);
       }
     }
     int skip8  = readBuffer(hex,      12, dataFile);
     for(int i=0; i<16; i++){
       histPATT->Fill(i+1, pattReg[i]);
-      histPATT->Fill(i+16+1, pattMult[i]);
+      histPATT->Fill(i+16+1, pattMul[i]);
     }
 
     
@@ -417,3 +418,6 @@ int readBuffer(unsigned char *hex, size_t bufSize, FILE * dataFile){
   }
   
 }
+
+
+
