@@ -66,7 +66,7 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
   TH1F *histCLOCK = new TH1F("histCLOCK" , "histCLOCK"  , 110,  -0.5,   110.5);
   TH1F *histADC1  = new TH1F("histADC1"  , "histADC1"   ,2048,  -0.5,  2048.5);
   TH1F *histADCG  = new TH1F("histADCG"  , "histADCG"   ,2048,  -0.5,  2048.5);
-  TH1F *histADCSUM= new TH1F("histADCSUM", "histADCSUM" ,2048,  -0.5,  2048.5);
+  TH1F *histADCsum= new TH1F("histADCsum", "histADCsum" ,2048,  -0.5,  2048.5);
   TH1F *histTIME  = new TH1F("histTIME"  , "histTIME"   , 401,  -0.5,  4000.5);
   
   int nonInhib = 0;
@@ -207,7 +207,7 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     skipBuffer(hex,       8, dataFile);
     histADC1  ->Fill(ADCchS1);
     histADCG  ->Fill(ADCchSG);
-    histADCSUM->Fill(ADCchS1+ADCchSG);
+    histADCsum->Fill(ADCchS1+ADCchSG);
     
     
     //8. V259N       - pattern unit       -> 16 bit pattern reg. + 16 bit mul = 4 bytes = 0.25 riga
@@ -243,61 +243,57 @@ void read(TString inputPath = "../../data/night2/pedestal1_20180216_162345.dat",
     
     //9. C211        - programmable delay -> 16ch x  8      bit = 128 bits = 16 bytes = 1   riga
     //               - NON USATO
-    int skip9  = readBuffer(hex,  16*8/8, dataFile);
+    skipBuffer(hex,  16*8/8, dataFile);
     
     //LAST LINE
-    int skip10 = readBuffer(hex,      16, dataFile);
+    skipBuffer(hex,      16, dataFile);
     
     if(VERB)printf("\n");
 
     readTree->Fill();
   }
-
   
+  fclose(dataFile);
+  
+
   Float_t deadTime = (nonInhib-inhib)/static_cast<Float_t>(nonInhib);
   histINHIB -> Fill(0.5, nonInhib);
-  histINHIB -> Fill(1.5, inhib);
-  histDEADT -> Fill(deadTime);
+  histINHIB -> Fill(1.5, inhib   );
+  histDEADT -> Fill(deadTime     );
   
   TCanvas *canvas = new TCanvas("canvas", "canvas", 200, 10, 600, 400);
-  canvas->Divide(3,2);
-  canvas->cd(1);
-  gPad->SetLogy();
-  histTIME->DrawCopy("hist");
-  canvas->cd(2);
-  gPad->SetLogy();
-  histCLOCK ->DrawCopy("hist");
+  canvas   -> Divide(3,2);
+  canvas   -> cd(1); gPad->SetLogy();
+  histTIME -> DrawCopy("hist");
 
-  canvas->cd(3);
-  gPad->Divide(2,1);
-  gPad->cd(1);
-  histINHIB->SetMinimum(0.);
-  histINHIB->DrawCopy("hist");
-  canvas->cd(3);
-  gPad->cd(2);
-  histDEADT->DrawCopy("hist");
+  canvas   -> cd(2); gPad->SetLogy();
+  histCLOCK-> DrawCopy("hist");
 
-  canvas->cd(4);
-  histADC1->DrawCopy("hist");
-  canvas->cd(5);
-  histADCG->DrawCopy("hist");
+  canvas   -> cd(3); gPad->Divide(2,1); gPad->cd(1);
+  histINHIB-> SetMinimum(0.);
+  histINHIB-> DrawCopy("hist");
+  canvas   -> cd(3); gPad->cd(2);
+  histDEADT-> DrawCopy("hist");
 
-  canvas->cd(6);
-  gPad->Divide(2,1);
-  gPad->cd(1);
-  histPATT->DrawCopy("hist");
-  canvas->cd(6);
-  gPad->cd(2);
-  histQ->DrawCopy("hist");
+  canvas   -> cd(4);
+  histADC1 -> DrawCopy("hist");
+
+  canvas   -> cd(5);
+  histADCG -> DrawCopy("hist");
+
+  canvas   -> cd(6); gPad->Divide(2,1); gPad->cd(1);
+  histPATT -> DrawCopy("hist");
+  canvas   -> cd(6); gPad->cd(2);
+  histQ    -> DrawCopy("hist");
+  
+  canvas   -> Write();
+  readFile -> Write();
+  readFile -> Close();
 
   
-  canvas->Write();
-  readFile->Write();
-  readFile->Close();
-
-  //histADCSUM->DrawCopy("hist");
+  //histADCsum->DrawCopy("hist");
   
-  fclose (dataFile);
+
 
   cout << endl;
   printf("[END      ]                         \n");
