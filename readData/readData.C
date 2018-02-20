@@ -9,6 +9,7 @@
 #include "TH1.h"
 #include "TFile.h"
 #include "TTree.h"
+#include "TVectorF.h"
 
 #endif
 
@@ -59,22 +60,24 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", U
 
   //open output tree
   TTree *readTree = new TTree("readTree", "Read data tree");
-  int CLOCKch;
-  int SCLinh;   //scaler inhibited
-  int SCLuninh; //scaler not inhibited
-  int TDCch;
-  int ADCchS1;
-  int ADCchSG;
+  int validStr[16];
+  int lCLOCKch;
+  int lSCLinh;   //scaler inhibited
+  int lSCLuninh; //scaler not inhibited
+  int lTDCch;
+  int lADCchS1;
+  int lADCchSG;
   int pattReg[16];
   int pattMul[16];
-  readTree->Branch("CLOCKch" , &CLOCKch , "CLOCKch/I"    );
-  readTree->Branch("SCLinh"  , &SCLinh  , "SCLinh/I"     );
-  readTree->Branch("SCLuninh", &SCLuninh, "SCLuninh/I"   );
-  readTree->Branch("TDCch"   , &TDCch   , "TDCch/I"      );
-  readTree->Branch("ADCchS1" , &ADCchS1 , "ADCchS1/I"    );
-  readTree->Branch("ADCchSG" , &ADCchSG , "ADCchSG/I"    );
-  readTree->Branch("pattReg" , &pattReg , "pattReg[16]/I");
-  readTree->Branch("pattMul" , &pattMul , "pattMul[16]/I");
+  readTree->Branch("validStr", &validStr, "validStr[16]/I");
+  readTree->Branch("CLOCKch" , &lCLOCKch , "lCLOCKch/I"     );
+  readTree->Branch("SCLinh"  , &lSCLinh  , "lSCLinh/I"      );
+  readTree->Branch("SCLuninh", &lSCLuninh, "lSCLuninh/I"    );
+  readTree->Branch("TDCch"   , &lTDCch   , "lTDCch/I"       );
+  readTree->Branch("ADCchS1" , &lADCchS1 , "lADCchS1/I"     );
+  readTree->Branch("ADCchSG" , &lADCchSG , "lADCchSG/I"     );
+  readTree->Branch("pattReg" , &pattReg , "pattReg[16]/I" );
+  readTree->Branch("pattMul" , &pattMul , "pattMul[16]/I" );
 
   DBGMODE = DEBUG;
   printf("[START    ]                           \n");
@@ -131,7 +134,7 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", U
     
     //Get event validation --> TO DO: skip events not passing event validation
     int evtValid  = readBuffer(hex, 2 , dataFile); //[bytes]
-    int validStr[16];
+    //int validStr[16];
     for(int i=15; i>=0; i--){
       validStr[i] = evtValid%2;
       evtValid    = evtValid/2;
@@ -159,6 +162,7 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", U
     int CLOCKch  = readBuffer(hex, 32/8, dataFile);
     if(VERB)printf("[READ DATA] Scaler CLOCK     : %d periodi da 100 ns\n", CLOCKch);
     histCLOCK -> Fill(CLOCKch);
+    lCLOCKch = CLOCKch;
     
     //2. LeCroy 2251 - scaler        -> 12ch x 32 (24) bit = 384 bits = 48 bytes = 3   righe   - NON USATO
     skipBuffer(hex, 12*32/8, dataFile);
@@ -168,18 +172,21 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", U
     nonInhib     = SCLuninh;
     skipBuffer(hex, 15*32/8, dataFile);
     if(VERB)printf("[READ DATA] Scaler non inibit: %d \n", SCLuninh);
+    lSCLuninh = SCLuninh;
     
     //4. V560N       - scaler inhibited -> 16ch x 32   bit = 512 bits = 64 bytes = 4   righe   - channel 0
     int SCLinh  = readBuffer(hex,  32/8, dataFile);
     inhib       = SCLinh;
     skipBuffer(hex, 15*32/8, dataFile);
     if(VERB)printf("[READ DATA] Scaler inibito   : %d \n", SCLinh);
+    lSCLinh = SCLinh;
     
     //5. 2228A       - tdc           -> 8 ch x 16 (11) bit = 128 bits = 16 bytes = 1 riga   - channel 7
     skipBuffer(hex,  7*16/8, dataFile);
     int TDCch   = readBuffer(hex, 16/8, dataFile);
     if(VERB)printf("[READ DATA] TDC channel      : %d \n", TDCch);
     histTIME->Fill(TDCch);
+    lTDCch = TDCch;
     
     //6. 2249A       - adc           -> 12ch x 16 (10) bit = 192 bits = 24 bytes = 1.5 righe
     //                                  + 8 bytes padding             =  8 bytes = 0.5 righe - NON USATO
@@ -196,6 +203,8 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", U
     histADC1  ->Fill(ADCchS1);
     histADCG  ->Fill(ADCchSG);
     histADCsum->Fill(ADCchS1+ADCchSG);
+    lADCchS1 = ADCchS1;
+    lADCchSG = ADCchSG;
     
     
     //8. V259N       - pattern unit  -> 16 bit pattern reg. + 16 bit mul = 4 bytes = 0.25 riga
@@ -203,8 +212,8 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", U
     //                               ma ci sono sicuramente altri 12 bytes di riempimento = 0.75 riga
     int pattRegInt = readBuffer(hex, 16/8, dataFile);
     int pattMulInt = readBuffer(hex, 16/8, dataFile);
-    int pattReg[16];
-    int pattMul[16];
+    //int pattReg[16];
+    //int pattMul[16];
     for(int i=0; i<16; i++){
       pattReg[i] = pattRegInt%2;
       pattRegInt = pattRegInt/2;
@@ -245,7 +254,11 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", U
   fclose(dataFile);
   
   //dead time
+  TVectorF vec(3);   //vector = (nonInhib, inhib, deadTime)
+  vec[0] = nonInhib;
+  vec[1] = inhib;
   Float_t deadTime = (nonInhib-inhib)/static_cast<Float_t>(nonInhib);
+  vec[2] = deadTime;
   histINHIB -> Fill(0.5, nonInhib);
   histINHIB -> Fill(1.5, inhib   );
   histDEADT -> Fill(deadTime     );
@@ -277,6 +290,7 @@ void read(TString inputPath="../../data/night2/pedestal1_20180216_162345.dat", U
   histQ    -> DrawCopy("hist");
   
   canvas   -> Write();
+  vec.Write("vec");
   readFile -> Write();
   readFile -> Close();
   
