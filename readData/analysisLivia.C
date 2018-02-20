@@ -7,15 +7,17 @@
 #include "TStopwatch.h"
 #include "TCanvas.h"
 #include "TH1.h"
+#include "TF1.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TVectorF.h"
 #include "TStyle.h"
+#include "TMath.h"
 
 #endif
 
 
-void plot(TString inputFilePath="readFile.root"){
+void plot(Bool_t PEDESTAL = kFALSE, TString inputFilePath="readFile.root"){
 
   //open readFile
   TFile   *readFile = new TFile(inputFilePath);
@@ -60,74 +62,98 @@ void plot(TString inputFilePath="readFile.root"){
 
 
 
+  Int_t nbinsTIME = 401;
   // TH1F *histQ     = new TH1F("histQ   "  , "histQ   "   ,  16,  -0.5,    15.5);
-   TH1F *histCLOCK = new TH1F("histCLOCK" , "Scaler (TDC) [C257]"  , 110,  -0.5,   110.5);
-   TH1F *histADC1  = new TH1F("histADC1"  , "ADCS1 [2249W]"   ,2048,  -0.5,  2048.5);
-   TH1F *histADCG  = new TH1F("histADCG"  , "ADCSG [2249W]"   ,2048,  -0.5,  2048.5);
-  // TH1F *histADCsum= new TH1F("histADCsum", "histADCsum" ,2048,  -0.5,  2048.5);
-   TH1F *histTIME  = new TH1F("histTIME"  , "TDC[2228A]"   , 401,  -0.5,  4000.5);
-  // TH1F *histINHIB = new TH1F("histINHIB", "histINHIB"   ,   2,   0. ,     2. );
-  // TH1F *histDEADT = new TH1F("histDEADT", "histDEADTIME", 101,-0.005,   1.005);
-  // TH1F *histPATT  = new TH1F("histPATT" , "histPATT"    ,  32,   0.5,    32.5);
+   TH1F *histCLOCK   = new TH1F("histCLOCK" , "Scaler (TDC) [C257]"  , 110,  -0.5,   110.5);
+   TH1F *histADC1    = new TH1F("histADC1"  , "ADCS1 [2249W]"   ,2048,  -0.5,  2048.5);
+   TH1F *histADCG    = new TH1F("histADCG"  , "ADCSG [2249W]"   ,2048,  -0.5,  2048.5);
+  //TH1F *histADCsum = new TH1F("histADCsum", "histADCsum" ,2048,  -0.5,  2048.5);
+   TH1F *histTIME    = new TH1F("histTIME"  , "TDC[2228A]"   , nbinsTIME,  -0.5,  4010.5);
+  //TH1F *histINHIB  = new TH1F("histINHIB" , "histINHIB"   ,   2,   0. ,     2. );
+  //TH1F *histDEADT  = new TH1F("histDEADT" , "histDEADTIME", 101,-0.005,   1.005);
+  //TH1F *histPATT   = new TH1F("histPATT"  , "histPATT"    ,  32,   0.5,    32.5);
 
-   UInt_t nEvts  = readTree -> GetEntries();
-  
+   UInt_t  nEvts     = readTree -> GetEntries();
+   Float_t binW      = 10;
+   Float_t muonRatio = 1.268; //N(mu+)/N(mu-)
+   Float_t rho       = muonRatio;
+   
+
+   
+   TF1 *fitF1 = new TF1("fitF1","[0]+[1]*10/(1+1.268)*TMath::Exp(-10*x*[2])*([2]*(1.268+TMath::Exp(-10*x*[2]))+[3]*TMath::Exp(-[3]*10*x))",80,4000);
+   fitF1->SetParameter(0, 9.);
+   fitF1->SetParLimits(1, 0, 100000);
+   //[0] = Nbg = backgroung costante
+   //[1] = N0  = initial particle count
+   //[2] = lambda0 = costante di decadimento þ[T^-1]
+   //[3] = lambdaC = costante di cattura = inverso del tempo di cattura [T^-1]
+
+   
    for(UInt_t i=0; i<nEvts; i++){
      readTree   -> GetEvent(i);
-  //   for(int j=0; j<16; j++){
-  //     histQ->Fill(j,validStr[j]);
-  //   }
-     histCLOCK  -> Fill(CLOCKch);
-     histTIME   -> Fill(TDCch);
-     histADC1   -> Fill(ADCchS1);
-     histADCG   -> Fill(ADCchSG);
-  //   histADCsum -> Fill(ADCchS1+ADCchSG);
-  //   for(int j=0; j<16; j++){
-  //     histPATT -> Fill(j+1   , pattReg[j]);
-  //     histPATT -> Fill(j+16+1, pattMul[j]);
-  //   }
-  //   histINHIB  -> Fill(0.5, nonInhib);
-  //   histINHIB  -> Fill(1.5, inhib   );
-  //   histDEADT  -> Fill(deadTime     );
+     //   for(int j=0; j<16; j++){
+     //     histQ->Fill(j,validStr[j]);
+     //   }
+     if(!PEDESTAL){//ADCchSG>850 && ADCchSG<2025 && 
+       if(ADCchSG>850 && ADCchSG<2025 && ADCchS1>330 && ADCchS1<2025){
+	 histCLOCK  -> Fill(CLOCKch);
+	 histTIME   -> Fill(TDCch);
+	 histADC1   -> Fill(ADCchS1);
+	 histADCG   -> Fill(ADCchSG);
+       }
+     }
+     else{
+       histCLOCK  -> Fill(CLOCKch);
+       histTIME   -> Fill(TDCch);
+       histADC1   -> Fill(ADCchS1);
+       histADCG   -> Fill(ADCchSG);
+     }
+       
+     //   histADCsum -> Fill(ADCchS1+ADCchSG);
+     //   for(int j=0; j<16; j++){
+     //     histPATT -> Fill(j+1   , pattReg[j]);
+     //     histPATT -> Fill(j+16+1, pattMul[j]);
+     //   }
+     //   histINHIB  -> Fill(0.5, nonInhib);
+     //   histINHIB  -> Fill(1.5, inhib   );
+     //   histDEADT  -> Fill(deadTime     );
    }
-  
-  //plots
-    TCanvas *canvas1  = new TCanvas("TDC", "TDC", 200, 10, 600, 400);
-    gPad->SetLogy();
-    gStyle->SetOptStat("emr");
-    histTIME -> GetXaxis()-> SetTitle("# canali");
-    histTIME -> GetYaxis()-> SetTitle("# eventi");
-    histTIME -> DrawCopy("hist");
-  
-    TCanvas *canvas2 = new TCanvas("CLOCK", "CLOCK", 200, 10, 600, 400);
-    gPad->SetLogy();
-    histCLOCK -> GetXaxis()->SetTitle("#canali");  
-    histCLOCK -> GetYaxis()->SetTitle("#eventi");
-    histCLOCK-> DrawCopy("hist");
-  
-    TCanvas *canvas3 = new TCanvas("ADC1", "ADC1", 200, 10, 600, 400);
-    // gPad->SetLogy();
-    histADC1 -> GetXaxis()->SetTitle("# canali");
-    histADC1 -> GetYaxis()->SetTitle("# eventi");    
-    histADC1->GetYaxis()->SetRangeUser(0.,3000.);
-    histADC1->GetXaxis()->SetRangeUser(0.,2025.);
-    histADC1 -> DrawCopy("hist");
-  
-  
-    TCanvas *canvas4 = new TCanvas("ADCG", "ADCG", 200, 10, 600, 400);
-    // gPad->SetLogy();
-    histADCG -> GetXaxis()->SetTitle("# canali");
-    histADCG -> GetYaxis()->SetTitle("# eventi");
-    histADCG->GetYaxis()->SetRangeUser(0.,1400.);
-    histADCG->GetXaxis()->SetRangeUser(0.,2025.);  //c'è un picco al canale 2030
-    histADCG -> DrawCopy("hist");
-
-
-   //canvas   -> Write();
-   //vec.Write("vec");
-   //readFile -> Write();
-    readFile -> Close();
-  
+   
+   //plots
+   TCanvas *canvas1  = new TCanvas("TDC", "TDC", 200, 10, 600, 400);
+   //gPad->SetLogy();
+   gStyle->SetOptStat("emr");
+   histTIME -> GetXaxis()-> SetTitle("# canali");
+   histTIME -> GetYaxis()-> SetTitle("# eventi");
+   histTIME -> Fit(fitF1);
+   histTIME -> DrawCopy("hist");
+   
+   TCanvas *canvas2 = new TCanvas("CLOCK", "CLOCK", 200, 10, 600, 400);
+   gPad->SetLogy();
+   histCLOCK -> GetXaxis()->SetTitle("#canali");  
+   histCLOCK -> GetYaxis()->SetTitle("#eventi");
+   histCLOCK-> DrawCopy("hist");
+   
+   TCanvas *canvas3 = new TCanvas("ADC1", "ADC1", 200, 10, 600, 400);
+   // gPad->SetLogy();
+   histADC1 -> GetXaxis()->SetTitle("# canali");
+   histADC1 -> GetYaxis()->SetTitle("# eventi");    
+   //histADC1->GetYaxis()->SetRangeUser(0.,3000.);
+   //histADC1->GetXaxis()->SetRangeUser(0.,2025.);
+   histADC1 -> DrawCopy("hist");
+   
+   
+   TCanvas *canvas4 = new TCanvas("ADCG", "ADCG", 200, 10, 600, 400);
+   // gPad->SetLogy();
+   histADCG -> GetXaxis()->SetTitle("# canali");
+   histADCG -> GetYaxis()->SetTitle("# eventi");
+   //histADCG->GetYaxis()->SetRangeUser(0.,1400.);
+   //histADCG->GetXaxis()->SetRangeUser(0.,2025.);  //c'è un picco al canale 2030
+   histADCG -> DrawCopy("hist");
+   
+   
+   readFile -> Close();
+   
    //histADCsum->DrawCopy("hist");
-  
+   
 }
