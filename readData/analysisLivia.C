@@ -91,7 +91,8 @@ void analysisLivia(TString inputFilePath="readFile.root"){
 
 
   //FIT se avessimo solo mu- .....
-  TF1 *fitBrutto = new TF1("fitBrutto","[0]*TMath::Exp(-[1]*x)", 0, 200);
+  TF1 *fitBrutto = new TF1("fitBrutto","[0]+[1]*TMath::Exp(-[2]*x)", 0, 200);
+  fitBrutto -> SetParLimits(1, 0, 10000000);
   
 
   
@@ -120,9 +121,9 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    gStyle->SetOptStat("emr");
    histTIME -> GetXaxis()-> SetTitle("# canali");
    histTIME -> GetYaxis()-> SetTitle("# eventi");
-   histTIME -> GetXaxis()->SetRangeUser(0.,1025.);
-   histTIME -> Fit(fitBrutto);
-   histTIME -> Draw("");
+   histTIME -> GetXaxis()->SetRangeUser(0.,1025.);   
+   histTIME -> Fit(fitBrutto, "R");
+   histTIME -> Draw();
 
 
    /*
@@ -130,7 +131,7 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    cout << "[RESULT   ]" << endl;
    cout << "[RESULT   ] Muon mean lifetime: (" << (0.1/4)/(fitF1->GetParameter(2)) << "+-" << (1/(fitF1->GetParameter(2)*fitF1->GetParameter(2)))*fitF1->GetParError(2) << ") us" <<endl;
    cout << "[RESULT   ]" << endl;
-   */
+  
    
    TCanvas *canvas2 = new TCanvas("CLOCK", "CLOCK", 200, 10, 600, 400);
    //gPad->SetLogy();
@@ -170,7 +171,7 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    //histADCGnP->GetYaxis()->SetRangeUser(0.,1400.);
    //histADCGnP->GetXaxis()->SetRangeUser(0.,2025.);  //c'è un picco al canale 2030
    histADCGnP -> DrawCopy("hist");
-   
-   readFile -> Close();
+   */ 
+   //  readFile -> Close();
    
 }
