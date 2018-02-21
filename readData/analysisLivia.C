@@ -63,16 +63,15 @@ void analysisLivia(TString inputFilePath="readFile.root"){
 
 
   Int_t nbinsTIME = 401;
-  // TH1F *histQ     = new TH1F("histQ   "  , "histQ   "   ,  16,  -0.5,    15.5);
+  Int_t nbinsADC = 2048;
   TH1F *histCLOCK   = new TH1F("histCLOCK" , "Scaler (TDC) [C257]"  , 110,  -0.5,   110.5);
-  TH1F *histADC1    = new TH1F("histADC1"  , "ADCS1 [2249W]"   ,2048,  -0.5,  2048.5);
-  TH1F *histADCG    = new TH1F("histADCG"  , "ADCSG [2249W]"   ,2048,  -0.5,  2048.5);
-  //TH1F *histADCsum = new TH1F("histADCsum", "histADCsum" ,2048,  -0.5,  2048.5);
+  TH1F *histADC1    = new TH1F("histADC1"  , "ADCS1 [2249W]"   ,nbinsADC,  -0.5,  2048.5);
+  TH1F *histADCG    = new TH1F("histADCG"  , "ADCSG [2249W]"   ,nbinsADC,  -0.5,  2048.5);
+  TH1F *histADC1nP  = new TH1F("histADC1nP", "ADCS1 [2249W] nP",nbinsADC,  -0.5,  2048.5);
+  TH1F *histADCGnP  = new TH1F("histADCGnP", "ADCSG [2249W] nP",nbinsADC,  -0.5,  2048.5);
   TH1F *histTIME    = new TH1F("histTIME"   , "TDC[2228A]"   , nbinsTIME,  -0.5,  4010.5);
   TH1F *histTIMEmus = new TH1F("histTIMEmus", "TDC[2228A]"   , nbinsTIME,  -0.5,  4010.5);
-  //TH1F *histINHIB  = new TH1F("histINHIB" , "histINHIB"   ,   2,   0. ,     2. );
-  //TH1F *histDEADT  = new TH1F("histDEADT" , "histDEADTIME", 101,-0.005,   1.005);
-  //TH1F *histPATT   = new TH1F("histPATT"  , "histPATT"    ,  32,   0.5,    32.5);
+
   
   UInt_t  nEvts     = readTree -> GetEntries();
   Float_t binW      = 10;
@@ -101,31 +100,27 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    
    
    //TF1 *fitF2 = new TF1("fitF2","100 + (2000000.*1.000/(1+1.268)) * TMath::Exp(-1.000*x/2.2) * ( (1/2.2) * (1.268+TMath::Exp(-1.000*x/2.2))  + 0.0376*TMath::Exp(-0.0376*1.000*x))",0.1,1000);
-   TCanvas *cProva = new TCanvas("PROVA", "PROVA", 200, 10, 600, 400);
-   cProva->cd();
-   fitF2->Draw();
+   //TCanvas *cProva = new TCanvas("PROVA", "PROVA", 200, 10, 600, 400);
+   //cProva->cd();
+   //fitF2->Draw();
    
    for(UInt_t i=0; i<nEvts; i++){
      readTree   -> GetEvent(i);
-     //   for(int j=0; j<16; j++){
-     //     histQ->Fill(j,validStr[j]);
-     //   }
      histCLOCK  -> Fill(CLOCKch);
      histTIME   -> Fill(TDCch);
      histADC1   -> Fill(ADCchS1);
      histADCG   -> Fill(ADCchSG);
-     
-       
-     //   histADCsum -> Fill(ADCchS1+ADCchSG);
-     //   for(int j=0; j<16; j++){
-     //     histPATT -> Fill(j+1   , pattReg[j]);
-     //     histPATT -> Fill(j+16+1, pattMul[j]);
-     //   }
-     //   histINHIB  -> Fill(0.5, nonInhib);
-     //   histINHIB  -> Fill(1.5, inhib   );
-     //   histDEADT  -> Fill(deadTime     );
+   }
+
+   Int_t pedestalS1 = 159;
+   Int_t pedestalSG = 264;
+   
+   for(Int_t i=0; i<nbinsADC; i++){
+     histADC1nP->Fill(i+1, histADC1->GetBinContent(pedestalS1+i+1));
+     histADCGnP->Fill(i+1, histADCG->GetBinContent(pedestalSG+i+1));
    }
    
+
    //plots
 
    TCanvas *canvas1  = new TCanvas("TDC", "TDC", 200, 10, 600, 400);
@@ -157,8 +152,14 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    histADC1 -> GetXaxis()->SetTitle("# canali");
    histADC1 -> GetYaxis()->SetTitle("# eventi");    
    //histADC1->GetYaxis()->SetRangeUser(0.,3000.);
-
    histADC1 -> DrawCopy("hist");
+
+   TCanvas *canvas3nP = new TCanvas("ADC1nP", "ADC1nP", 200, 10, 600, 400);
+   // gPad->SetLogy();
+   histADC1nP -> GetXaxis()->SetTitle("# canali");
+   histADC1nP -> GetYaxis()->SetTitle("# eventi");    
+   //histADC1nP->GetYaxis()->SetRangeUser(0.,3000.);
+   histADC1nP -> DrawCopy("hist");
    
    
    TCanvas *canvas4 = new TCanvas("ADCG", "ADCG", 200, 10, 600, 400);
@@ -168,6 +169,14 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    //histADCG->GetYaxis()->SetRangeUser(0.,1400.);
    //histADCG->GetXaxis()->SetRangeUser(0.,2025.);  //c'è un picco al canale 2030
    histADCG -> DrawCopy("hist");
+
+   TCanvas *canvas4nP = new TCanvas("ADCGnP", "ADCGnP", 200, 10, 600, 400);
+   // gPad->SetLogy();
+   histADCGnP -> GetXaxis()->SetTitle("# canali");
+   histADCGnP -> GetYaxis()->SetTitle("# eventi");
+   //histADCGnP->GetYaxis()->SetRangeUser(0.,1400.);
+   //histADCGnP->GetXaxis()->SetRangeUser(0.,2025.);  //c'è un picco al canale 2030
+   histADCGnP -> DrawCopy("hist");
    
    
    readFile -> Close();
