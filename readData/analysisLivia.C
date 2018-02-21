@@ -77,33 +77,24 @@ void analysisLivia(TString inputFilePath="readFile.root"){
   Float_t binW      = 10;
   Float_t muonRatio = 1.268; //N(mu+)/N(mu-)
   Float_t rho       = muonRatio;
-   
 
-   
-  //   TF1 *fitF1 = new TF1("fitF1","[0]+[1]*TMath::Exp([2]*x) * (-[2]*(1.268+TMath::Exp([2]*x))  -[3]*TMath::Exp([3]*x) )/10.",0.1,1000);
+  /*
+  //FIT COMPLESSIVO DALL'ARTICOLO DELLA MARCELLO
   TF1 *fitF1 = new TF1("fitF1","[0]+[1]*TMath::Exp(-[2]*10*x) * ( [2]*(1.268+TMath::Exp(-[2]*10*x)) +[3]*TMath::Exp(-[3]*10*x) )",0,400);
   fitF1->SetParameter(0, 10.);
   fitF1->SetParameter(1, 880000000);
   fitF1->SetParameter(2, 0.01136);
   fitF1->SetParameter(3, 0.000094);
-  //fitF1->SetParLimits(2, 0, 1);
-  //fitF1->SetParLimits(3, 0, 1);
-  //[0] = Nbg = backgroung costante
-  //[1] = N0*10/(1+1.268), con N0 = initial particle count
-  //[2] = -10 * lambda0, con lambda0 = costante di decadimento þ[T^-1]
-  //[3] = -10 * lambdaC, con lambdaC = costante di cattura = inverso del tempo di cattura [T^-1]
+  //FUNZIONE DI FIT CON PARAMETRI TUNATI PER ITERAZIONE...manuale...!
+  TF1 *fitF2 = new TF1("fitF2","10 + (2000000000.*(0.1000/4)/(1+1.268)) * TMath::Exp(-(0.1000/4)*(10*x)/2.2) * ( (1/2.2) * (1.268+TMath::Exp(-(0.1000/4)*(10*x)/2.2))  + 0.00376*TMath::Exp(-0.00376*(0.1000/4)*(10*x)))",0.1,1000);
+  */
+
+
+  //FIT se avessimo solo mu- .....
+  TF1 *fitBrutto = new TF1("fitBrutto","[0]*TMath::Exp(-[1]*x)", 0, 200);
   
-  //TF1 *fitF23 = new TF1("fitF1","[0]+294900*10/(1+1.268)*TMath::Exp(-4.036*x/87.88)*((1/87.88)(1.268+TMath::Exp(-4.036*x/87.88))+   *TMath::Exp(-[3]*10*x))",80,4000);
 
-   TF1 *fitF2 = new TF1("fitF2","10 + (2000000000.*(0.1000/4)/(1+1.268)) * TMath::Exp(-(0.1000/4)*(10*x)/2.2) * ( (1/2.2) * (1.268+TMath::Exp(-(0.1000/4)*(10*x)/2.2))  + 0.00376*TMath::Exp(-0.00376*(0.1000/4)*(10*x)))",0.1,1000);
-
-   
-   
-   //TF1 *fitF2 = new TF1("fitF2","100 + (2000000.*1.000/(1+1.268)) * TMath::Exp(-1.000*x/2.2) * ( (1/2.2) * (1.268+TMath::Exp(-1.000*x/2.2))  + 0.0376*TMath::Exp(-0.0376*1.000*x))",0.1,1000);
-   //TCanvas *cProva = new TCanvas("PROVA", "PROVA", 200, 10, 600, 400);
-   //cProva->cd();
-   //fitF2->Draw();
-   
+  
    for(UInt_t i=0; i<nEvts; i++){
      readTree   -> GetEvent(i);
      histCLOCK  -> Fill(CLOCKch);
@@ -111,7 +102,7 @@ void analysisLivia(TString inputFilePath="readFile.root"){
      histADC1   -> Fill(ADCchS1);
      histADCG   -> Fill(ADCchSG);
    }
-
+   
    Int_t pedestalS1 = 159;
    Int_t pedestalSG = 264;
    
@@ -120,9 +111,9 @@ void analysisLivia(TString inputFilePath="readFile.root"){
      histADCGnP->Fill(i+1, histADCG->GetBinContent(pedestalSG+i+1));
    }
    
-
+   
    //plots
-
+   
    TCanvas *canvas1  = new TCanvas("TDC", "TDC", 200, 10, 600, 400);
    canvas1->cd();
    //gPad->SetLogy();
@@ -130,14 +121,16 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    histTIME -> GetXaxis()-> SetTitle("# canali");
    histTIME -> GetYaxis()-> SetTitle("# eventi");
    histTIME -> GetXaxis()->SetRangeUser(0.,1025.);
-   histTIME -> Fit(fitF1);
-   histTIME -> DrawCopy("histE");
-   fitF2    -> Draw("same");
+   histTIME -> Fit(fitBrutto);
+   histTIME -> Draw("");
 
+
+   /*
+   //per il fit complessivo
    cout << "[RESULT   ]" << endl;
    cout << "[RESULT   ] Muon mean lifetime: (" << (0.1/4)/(fitF1->GetParameter(2)) << "+-" << (1/(fitF1->GetParameter(2)*fitF1->GetParameter(2)))*fitF1->GetParError(2) << ") us" <<endl;
    cout << "[RESULT   ]" << endl;
-
+   */
    
    TCanvas *canvas2 = new TCanvas("CLOCK", "CLOCK", 200, 10, 600, 400);
    //gPad->SetLogy();
@@ -178,9 +171,6 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    //histADCGnP->GetXaxis()->SetRangeUser(0.,2025.);  //c'è un picco al canale 2030
    histADCGnP -> DrawCopy("hist");
    
-   
    readFile -> Close();
-   
-   //histADCsum->DrawCopy("hist");
    
 }
