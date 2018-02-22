@@ -124,8 +124,8 @@ void analysis(TString inputFilePath="readFile.root"){
   Int_t pedestalSG = 264;
   
   for(Int_t i=0; i<nbinsADC; i++){
-    histADC1nP->Fill(i+1, histADC1->GetBinContent(pedestalS1+i+1));
-    histADCGnP->Fill(i+1, histADCG->GetBinContent(pedestalSG+i+1));
+    histADC1nP->SetBinContent(i+1, histADC1->GetBinContent(pedestalS1+i+1));
+    histADCGnP->SetBinContent(i+1, histADCG->GetBinContent(pedestalSG+i+1));
   }
   
   
@@ -286,14 +286,14 @@ void analysis(TString inputFilePath="readFile.root"){
    histADC1 -> GetXaxis()->SetTitle("# canali");
    histADC1 -> GetYaxis()->SetTitle("# eventi");    
    //histADC1->GetYaxis()->SetRangeUser(0.,3000.);
-   histADC1 -> DrawCopy("hist");
+   histADC1 -> Draw("E");
      
    TCanvas *canvas3nP = new TCanvas("ADC1nP", "ADC1nP", 200, 10, 600, 400);
    // gPad->SetLogy();
    histADC1nP -> GetXaxis()->SetTitle("# canali");
    histADC1nP -> GetYaxis()->SetTitle("# eventi");    
    //histADC1nP->GetYaxis()->SetRangeUser(0.,3000.);
-   histADC1nP -> DrawCopy("hist");
+   histADC1nP -> Draw("E");
      
    TCanvas *canvas4 = new TCanvas("ADCG", "ADCG", 200, 10, 600, 400);
    // gPad->SetLogy();
@@ -301,7 +301,7 @@ void analysis(TString inputFilePath="readFile.root"){
    histADCG -> GetYaxis()->SetTitle("# eventi");
    //histADCG->GetYaxis()->SetRangeUser(0.,1400.);
    //histADCG->GetXaxis()->SetRangeUser(0.,2025.);  //c'è un picco al canale 2030
-   histADCG -> DrawCopy("hist");
+   histADCG -> Draw("E");
    
    TCanvas *canvas4nP = new TCanvas("ADCGnP", "ADCGnP", 200, 10, 600, 400);
    // gPad->SetLogy();
@@ -309,7 +309,7 @@ void analysis(TString inputFilePath="readFile.root"){
    histADCGnP -> GetYaxis()->SetTitle("# eventi");
    //histADCGnP->GetYaxis()->SetRangeUser(0.,1400.);
    //histADCGnP->GetXaxis()->SetRangeUser(0.,2025.);  //c'è un picco al canale 2030
-   histADCGnP -> DrawCopy("hist");
+   histADCGnP -> Draw("E");
 
      //  readFile -> Close();
      
