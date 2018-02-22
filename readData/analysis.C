@@ -17,7 +17,7 @@
 #endif
 
 
-void analysisLivia(TString inputFilePath="readFile.root"){
+void analysis(TString inputFilePath="readFile.root"){
 
   //open readFile
   TFile   *readFile = new TFile(inputFilePath);
@@ -92,84 +92,118 @@ void analysisLivia(TString inputFilePath="readFile.root"){
   //FIT se avessimo solo mu- .....
   //TF1 *fitBrutto = new TF1("fitBrutto","[0]+[1]*TMath::Exp(-[2]*x)", 0, 200);
   //fitBrutto -> SetParLimits(1, 0, 10000000);
-
-
-
   
-   for(UInt_t i=0; i<nEvts; i++){
-     readTree   -> GetEvent(i);
-     histCLOCK  -> Fill(CLOCKch);
-     histTIME   -> Fill(TDCch);
+  
+  
+  
+  for(UInt_t i=0; i<nEvts; i++){
+    readTree   -> GetEvent(i);
+    /*
 
-     //     if(TDCch>100){
-       histADC1   -> Fill(ADCchS1);
-       histADCG   -> Fill(ADCchSG);
-       //}
-   }
-   
-   Int_t pedestalS1 = 159;
-   Int_t pedestalSG = 264;
-   
-   for(Int_t i=0; i<nbinsADC; i++){
-     histADC1nP->Fill(i+1, histADC1->GetBinContent(pedestalS1+i+1));
-     histADCGnP->Fill(i+1, histADCG->GetBinContent(pedestalSG+i+1));
-   }
-   
-   
-   //=======================================
-   //---------------- TDC ------------------
-   //=======================================
-   TCanvas *canvas1  = new TCanvas("TDC", "TDC", 200, 10, 600, 400);
-   canvas1  ->cd();
-   gPad     -> SetLogy();
-   gStyle   ->SetOptStat("emr");
-   histTIME -> GetXaxis() -> SetTitle("# canali");
-   histTIME -> GetYaxis() -> SetTitle("# eventi");
-   histTIME -> GetXaxis() -> SetRangeUser(0.,2000.);   
+    histCLOCK  -> Fill(CLOCKch);
+    histTIME   -> Fill(TDCch);
+    histADC1   -> Fill(ADCchS1);
+    histADCG   -> Fill(ADCchSG);
+    }
+    */
+    //if((ADCchSG>330 && ADCchSG<890) || ADCchSG>2025){ //"elettroni" + overflow
+    //if(ADCchSG>890 && ADCchSG<2025){ //muoni
+    //if(ADCchS1>330 && ADCchS1<1000){
+    //if(TDCch<180){ //cattura (solo tempi bassi, 180 ch = 0.45 us = 450 ns
+    //if(TDCch>180){ //solo decadimento (e overflow dell'ADC)
+    //if(TDCch>180 && TDCch<4000){ //solo decadimento, tagliato anche l'overflow dell'ADC
+    histCLOCK  -> Fill(CLOCKch);
+    histTIME   -> Fill(TDCch);
+    histADC1   -> Fill(ADCchS1);
+    histADCG   -> Fill(ADCchSG);
+    //}
+    
+  }
+  
+  Int_t pedestalS1 = 159;
+  Int_t pedestalSG = 264;
+  
+  for(Int_t i=0; i<nbinsADC; i++){
+    histADC1nP->Fill(i+1, histADC1->GetBinContent(pedestalS1+i+1));
+    histADCGnP->Fill(i+1, histADCG->GetBinContent(pedestalSG+i+1));
+  }
+  
+  
+  //=======================================
+  //---------------- TDC ------------------
+  //=======================================
+  TCanvas *canvas1  = new TCanvas("TDC", "TDC", 200, 10, 600, 400);
+  canvas1  ->cd();
+  gPad     -> SetLogy();
+  gStyle   ->SetOptStat("emr");
+  histTIME -> GetXaxis() -> SetTitle("# canali");
+  histTIME -> GetYaxis() -> SetTitle("# eventi");
+  //histTIME -> GetXaxis() -> SetRangeUser(0.,2000.);   
+  
+  /*
+  //---------------------------------------
+  cout << "---------------------------------------" << endl;
+  cout << "DECAY - lifetime hardcoded"              << endl;
+  TF1 *fitDec2_2   = new TF1("fitDec2_2","[0]+[1]*TMath::Exp(- 2.197*0.025*(x))");
+   fitDec2_2 -> SetParLimits(1, 0, 10000000);
+   histTIME  -> Fit(fitDec2_2, "ME", "", 180, 800); //400, 1200
+   cout<<"Chi^2: "<<fitDec2_2->GetChisquare()<<", number of DoF: "<<fitDec2_2->GetNDF()<<" (Probability: "<<fitDec2_2->GetProb()<<")."<<endl;
+   */
 
+   
    //---------------------------------------
    cout << "---------------------------------------" << endl;
    cout << "DECAY - esponenziale semplice"           << endl;
    
    TF1 *fitDec      = new TF1("fitDec","[0]+[1]*TMath::Exp(-[2]*0.025*(x))");
-   fitDec   -> SetParameter(2, 2.2        );
+   //fitDec   -> SetParameter(2, 2.2        );
    fitDec   -> SetParLimits(1, 0, 10000000);
-   histTIME -> Fit(fitDec, "ME", "", 180, 800);
+   histTIME -> Fit(fitDec, "ME", "", 180, 800); //400, 1200
    Double_t parDec1 = fitDec->GetParameter(1);
    Double_t parDec2 = fitDec->GetParameter(2);
+   Double_t lambda0 = parDec2;
    cout<<"Chi^2: "<<fitDec->GetChisquare()<<", number of DoF: "<<fitDec->GetNDF()<<" (Probability: "<<fitDec->GetProb()<<")."<<endl;
+
 
    //---------------------------------------
    cout << "CAPTURE - esponenziale semplice" << endl;
    cout << "---------------------------------------" << endl;
    TF1 *fitCap0     = new TF1("fitCap0","[0]+[1]*TMath::Exp(-[2]*0.025*(x))");
+   //fitCap0  -> SetParLimits(0, 0, 10000000);
    fitCap0  -> SetParLimits(1, 0, 10000000);
    fitCap0  -> SetLineColor(kBlue);
    fitCap0  -> SetLineWidth(2);
    histTIME -> Fit(fitCap0, "ME+", "", 61, 150);
    cout<<"Chi^2: "<<fitCap0->GetChisquare()<<", number of DoF: "<<fitCap0->GetNDF()<<" (Probability: "<<fitCap0->GetProb()<<")."<< endl;
-
+   Double_t parCap02 = fitCap0->GetParameter(2);
+   Double_t lambdaTot = parCap02;
+   Double_t lambdaC   = lambdaTot - lambda0;
+   
+   /*
    //---------------------------------------
    cout << "---------------------------------------" << endl;
    cout << "CAPTURE - somma di esponenziali per tenere conto del contributo decay" << endl;
    TF1 *fitCap      = new TF1("fitCap","[0]+ ([1]*TMath::Exp(-[2]*0.025*(x)) + [3]*TMath::Exp(-[4]*0.025*(x)))");
    fitCap   -> SetParLimits(1, 0, 10000000);
-   //fitCap -> SetParameter(3, fitDec->GetParameter(1));
-   //fitCap -> SetParameter(4, fitDec->GetParameter(2));
-   fitCap   -> SetParLimits(3, parDec1 - parDec1/10., parDec1 + parDec1/10.);
-   fitCap   -> SetParLimits(4, parDec2 - parDec2/10., parDec2 + parDec2/10.);
+   fitCap -> SetParameter(3, fitDec->GetParameter(1));
+   fitCap -> SetParameter(4, fitDec->GetParameter(2));
+   //fitCap   -> SetParLimits(3, parDec1 - parDec1/10., parDec1 + parDec1/10.);
+   //fitCap   -> SetParLimits(4, parDec2 - parDec2/10., parDec2 + parDec2/10.);
    fitCap   -> SetLineColor(kGreen);
    histTIME -> Fit(fitCap, "ME+", "", 61, 150);
    Double_t parCap4 = fitCap->GetParameter(4);
    cout<<"Chi^2: "<<fitCap->GetChisquare()<<", number of DoF: "<<fitCap->GetNDF()<<" (Probability: "<<fitCap->GetProb()<<")."<< endl;
+   */
+
    
    histTIME -> Draw();
 
    
    cout << "[RESULT   ]" << endl;
    cout << "[RESULT   ] Muon mean lifetime            : (" << 1/parDec2 << "+-" << (1/(fitDec->GetParameter(2)*fitDec->GetParameter(2)))*fitDec->GetParError(2) << ") us" <<endl;
-   cout << "[RESULT   ] Muon capture time             : (" << 1./(fitCap0->GetParameter(2)) << "+-" << (1/(fitCap0->GetParameter(2)*fitCap0->GetParameter(2)))*fitCap0->GetParError(2) << ") us" <<endl;   
-   cout << "[RESULT   ] Muon capture time (doppio exp): (" << 1./(fitCap ->GetParameter(4)) << "+-" << (1/(fitCap ->GetParameter(4)*fitCap ->GetParameter(4)))*fitCap ->GetParError(4) << ") us" <<endl;
+   //cout << "[RESULT   ] Muon capture time             : (" << 1./(fitCap0->GetParameter(2)) << "+-" << (1/(fitCap0->GetParameter(2)*fitCap0->GetParameter(2)))*fitCap0->GetParError(2) << ") us" <<endl;
+   cout << "[RESULT   ] Muon capture time             : (" << 1./lambdaC << "+-" << (1/(fitCap0->GetParameter(2)*fitCap0->GetParameter(2)))*fitCap0->GetParError(2) << ") us ERRORE SBAGLIATO" <<endl;   
+   //cout << "[RESULT   ] Muon capture time (doppio exp): (" << 1./(fitCap ->GetParameter(2)) << "+-" << (1/(fitCap ->GetParameter(2)*fitCap ->GetParameter(2)))*fitCap ->GetParError(2) << ") us" <<endl;
    cout << "[RESULT   ]" << endl;
 
 
@@ -181,7 +215,7 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    //=======================================
    TCanvas *canvas2  = new TCanvas("CLOCK", "CLOCK", 200, 10, 600, 400);
    canvas2  ->cd();
-   //gPad     -> SetLogy();
+   gPad     -> SetLogy();
    gStyle   ->SetOptStat("emr");
    histCLOCK -> GetXaxis()->SetTitle("#canali");  
    histCLOCK -> GetYaxis()->SetTitle("#eventi");
@@ -192,23 +226,29 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    cout << "DECAY - esponenziale semplice"           << endl;
    
    TF1 *fitDecCL = new TF1("fitDecCL","[0]+[1]*TMath::Exp(-[2]*0.100*(x))");
-   fitDecCL  -> SetParameter(2, 2.2          );
+   //fitDecCL  -> SetParameter(2, 1./2.2          );
    fitDecCL  -> SetParLimits(1, 0, 10000000  );
-   histCLOCK -> Fit(fitDecCL, "ME", "", 8, 60);
+   histCLOCK -> Fit(fitDecCL, "ME", "", 8, 60); //4, 20
    Double_t parDec1CL = fitDecCL->GetParameter(1);
    Double_t parDec2CL = fitDecCL->GetParameter(2);
+   Double_t lambda0CL = parDec2CL;
    cout<<"Chi^2: "<<fitDecCL->GetChisquare()<<", number of DoF: "<<fitDecCL->GetNDF()<<" (Probability: "<<fitDecCL->GetProb()<<")."<<endl;
-
+   
    //---------------------------------------
    cout << "CAPTURE - esponenziale semplice" << endl;
    cout << "---------------------------------------" << endl;
    TF1 *fitCapCL0   = new TF1("fitCapCL0","[0]+[1]*TMath::Exp(-[2]*0.100*(x))");
+   fitCapCL0 -> SetParLimits(0, 0, 10000000);
    fitCapCL0 -> SetParLimits(1, 0, 10000000);
    fitCapCL0 -> SetLineColor(kBlue);
    fitCapCL0 -> SetLineWidth(2);
    histCLOCK -> Fit(fitCapCL0, "ME+", "", 2, 6);
    cout<<"Chi^2: "<<fitCapCL0->GetChisquare()<<", number of DoF: "<<fitCapCL0->GetNDF()<<" (Probability: "<<fitCapCL0->GetProb()<<")."<< endl;
-
+   Double_t parCap02CL  = fitCapCL0->GetParameter(2);
+   Double_t lambdaTotCL = parCap02CL;
+   Double_t lambdaCCL   = lambdaTotCL - lambda0CL;
+   
+   /*
    //---------------------------------------
    cout << "---------------------------------------" << endl;
    cout << "CAPTURE - somma di esponenziali per tenere conto del contributo decay" << endl;
@@ -222,14 +262,16 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    histCLOCK -> Fit(fitCapCL, "ME+", "", 2, 6);
    Double_t parCap4CL = fitCapCL->GetParameter(4);
    cout<<"Chi^2: "<<fitCapCL->GetChisquare()<<", number of DoF: "<<fitCapCL->GetNDF()<<" (Probability: "<<fitCapCL->GetProb()<<")."<< endl;
-
+   */
+   
    histCLOCK -> Draw();
 
    
    cout << "[RESULT   ]" << endl;
    cout << "[RESULT   ] Muon mean lifetime            : (" << 1/(fitDecCL->GetParameter(2)) << "+-" << (1/(fitDecCL->GetParameter(2)*fitDecCL->GetParameter(2)))*fitDecCL->GetParError(2) << ") us" <<endl;
-   cout << "[RESULT   ] Muon capture time             : (" << 1./(fitCapCL0->GetParameter(2)) << "+-" << (1/(fitCapCL0->GetParameter(2)*fitCapCL0->GetParameter(2)))*fitCapCL0->GetParError(2) << ") us" <<endl;   
-   cout << "[RESULT   ] Muon capture time             : (" << 1/(fitCapCL->GetParameter(4)) << "+-" << (1/(fitCapCL->GetParameter(4)*fitCapCL->GetParameter(4)))*fitCapCL->GetParError(4) << ") us" <<endl;
+   //cout << "[RESULT   ] Muon capture time             : (" << 1./(fitCapCL0->GetParameter(2)) << "+-" << (1/(fitCapCL0->GetParameter(2)*fitCapCL0->GetParameter(2)))*fitCapCL0->GetParError(2) << ") us" <<endl;
+   cout << "[RESULT   ] Muon capture time             : (" << 1./lambdaCCL << "+-" << (1/lambdaCCL*lambdaCCL)*fitCapCL0->GetParError(2) << ") us (ERRORE SBAGLIATO)" <<endl;   //DA CALCOLARE ERRORE
+   //cout << "[RESULT   ] Muon capture time             : (" << 1/(fitCapCL->GetParameter(2)) << "+-" << (1/(fitCapCL->GetParameter(2)*fitCapCL->GetParameter(2)))*fitCapCL->GetParError(2) << ") us" <<endl;
    cout << "[RESULT   ]" << endl;
    
    
