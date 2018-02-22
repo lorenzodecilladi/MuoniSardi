@@ -63,8 +63,8 @@ void analysisLivia(TString inputFilePath="readFile.root"){
 
 
   Int_t nbinsTIME = 401;
-  Int_t nbinsADC = 2048;
-  TH1F *histCLOCK   = new TH1F("histCLOCK"  , "Scaler (TDC) [C257]", 110      ,  -0.5,   110.5);
+  Int_t nbinsADC = 2049;
+  TH1F *histCLOCK   = new TH1F("histCLOCK"  , "Scaler (TDC) [C257]", 111      ,  -0.5,   110.5);
   TH1F *histADC1    = new TH1F("histADC1"   , "ADCS1 [2249W]"      , nbinsADC ,  -0.5,  2048.5);
   TH1F *histADCG    = new TH1F("histADCG"   , "ADCSG [2249W]"      , nbinsADC ,  -0.5,  2048.5);
   TH1F *histADC1nP  = new TH1F("histADC1nP" , "ADCS1 [2249W] nP"   , nbinsADC ,  -0.5,  2048.5);
@@ -93,19 +93,18 @@ void analysisLivia(TString inputFilePath="readFile.root"){
   //TF1 *fitBrutto = new TF1("fitBrutto","[0]+[1]*TMath::Exp(-[2]*x)", 0, 200);
   //fitBrutto -> SetParLimits(1, 0, 10000000);
 
-  //ESPONENZIALE NORMALE --> FIT IN RANGE SEPARATI
-  //TF1 *fitDec = new TF1("fitDec","[0]+[1]*TMath::Exp(-[2]*0.025*(x))", 150, 800);
-  TF1 *fitDec = new TF1("fitDec","[0]+[1]*TMath::Exp(-[2]*0.025*(x))");
-  fitDec -> SetParameter(2, 2.2);
-  fitDec -> SetParLimits(1, 0, 10000000);
+
 
   
    for(UInt_t i=0; i<nEvts; i++){
      readTree   -> GetEvent(i);
      histCLOCK  -> Fill(CLOCKch);
      histTIME   -> Fill(TDCch);
-     histADC1   -> Fill(ADCchS1);
-     histADCG   -> Fill(ADCchSG);
+
+     //     if(TDCch>100){
+       histADC1   -> Fill(ADCchS1);
+       histADCG   -> Fill(ADCchSG);
+       //}
    }
    
    Int_t pedestalS1 = 159;
@@ -117,80 +116,129 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    }
    
    
-   //plots
-
-   //----------- TDC -----------
+   //=======================================
+   //---------------- TDC ------------------
+   //=======================================
    TCanvas *canvas1  = new TCanvas("TDC", "TDC", 200, 10, 600, 400);
-   canvas1->cd();
-   //gPad->SetLogy();
-   gStyle->SetOptStat("emr");
-   histTIME -> GetXaxis()-> SetTitle("# canali");
-   histTIME -> GetYaxis()-> SetTitle("# eventi");
-   histTIME -> GetXaxis()->SetRangeUser(0.,2000.);   
-   histTIME -> Fit(fitDec, "", "", 150, 800);
+   canvas1  ->cd();
+   gPad     -> SetLogy();
+   gStyle   ->SetOptStat("emr");
+   histTIME -> GetXaxis() -> SetTitle("# canali");
+   histTIME -> GetYaxis() -> SetTitle("# eventi");
+   histTIME -> GetXaxis() -> SetRangeUser(0.,2000.);   
 
-   //TF1 *fitCap = new TF1("fitCap","[0]+[1]*TMath::Exp(-[2]*0.0025*(x))", 61, 150);
-   //fitCap -> SetParLimits(1, 0, 10000000);
+   //---------------------------------------
+   cout << "---------------------------------------" << endl;
+   cout << "DECAY - esponenziale semplice"           << endl;
    
-   TF1 *fitCap = new TF1("fitCap","[0]+ ( [1]*TMath::Exp(-[2]*0.0025*(x)) + [3]*TMath::Exp(-[4]*0.0025*(x)) )   ", 61, 150);
-   fitCap -> SetParLimits(1, 0, 10000000);
+   TF1 *fitDec      = new TF1("fitDec","[0]+[1]*TMath::Exp(-[2]*0.025*(x))");
+   fitDec   -> SetParameter(2, 2.2        );
+   fitDec   -> SetParLimits(1, 0, 10000000);
+   histTIME -> Fit(fitDec, "ME", "", 180, 800);
    Double_t parDec1 = fitDec->GetParameter(1);
    Double_t parDec2 = fitDec->GetParameter(2);
+   cout<<"Chi^2: "<<fitDec->GetChisquare()<<", number of DoF: "<<fitDec->GetNDF()<<" (Probability: "<<fitDec->GetProb()<<")."<<endl;
+
+   //---------------------------------------
+   cout << "CAPTURE - esponenziale semplice" << endl;
+   cout << "---------------------------------------" << endl;
+   TF1 *fitCap0     = new TF1("fitCap0","[0]+[1]*TMath::Exp(-[2]*0.025*(x))");
+   fitCap0  -> SetParLimits(1, 0, 10000000);
+   fitCap0  -> SetLineColor(kBlue);
+   fitCap0  -> SetLineWidth(2);
+   histTIME -> Fit(fitCap0, "ME+", "", 61, 150);
+   cout<<"Chi^2: "<<fitCap0->GetChisquare()<<", number of DoF: "<<fitCap0->GetNDF()<<" (Probability: "<<fitCap0->GetProb()<<")."<< endl;
+
+   //---------------------------------------
+   cout << "---------------------------------------" << endl;
+   cout << "CAPTURE - somma di esponenziali per tenere conto del contributo decay" << endl;
+   TF1 *fitCap      = new TF1("fitCap","[0]+ ([1]*TMath::Exp(-[2]*0.025*(x)) + [3]*TMath::Exp(-[4]*0.025*(x)))");
+   fitCap   -> SetParLimits(1, 0, 10000000);
    //fitCap -> SetParameter(3, fitDec->GetParameter(1));
    //fitCap -> SetParameter(4, fitDec->GetParameter(2));
-   fitCap -> SetParLimits(3, parDec1 - parDec1/20., parDec1 + parDec1/20.);
-   fitCap -> SetParLimits(4, parDec2 - parDec2/20., parDec2 + parDec2/20.);
-   
-   histTIME -> Fit(fitCap, "R+");
-   histTIME -> Draw();
-   cout<<"Chi^2: "<<fitDec->GetChisquare()<<", number of DoF: "<<fitDec->GetNDF()<<" (Probability: "<<fitDec->GetProb()<<")."<<endl;
+   fitCap   -> SetParLimits(3, parDec1 - parDec1/10., parDec1 + parDec1/10.);
+   fitCap   -> SetParLimits(4, parDec2 - parDec2/10., parDec2 + parDec2/10.);
+   fitCap   -> SetLineColor(kGreen);
+   histTIME -> Fit(fitCap, "ME+", "", 61, 150);
+   Double_t parCap4 = fitCap->GetParameter(4);
    cout<<"Chi^2: "<<fitCap->GetChisquare()<<", number of DoF: "<<fitCap->GetNDF()<<" (Probability: "<<fitCap->GetProb()<<")."<< endl;
    
-   //per il fit complessivo
-   cout << "[RESULT   ]" << endl;
-   //cout << "[RESULT   ] Muon mean lifetime: (" << (0.1/4)/(fitF1->GetParameter(2)) << "+-" << (1/(fitF1->GetParameter(2)*fitF1->GetParameter(2)))*fitF1->GetParError(2) << ") us" <<endl;
-   cout << "[RESULT   ] Muon mean lifetime: (" << 1/parDec2 << "+-" << (1/(fitDec->GetParameter(2)*fitDec->GetParameter(2)))*fitDec->GetParError(2) << ") us" <<endl;   
-   cout << "[RESULT   ]" << endl;
-
+   histTIME -> Draw();
 
    
-   //-------- CLOCK ---------
+   cout << "[RESULT   ]" << endl;
+   cout << "[RESULT   ] Muon mean lifetime            : (" << 1/parDec2 << "+-" << (1/(fitDec->GetParameter(2)*fitDec->GetParameter(2)))*fitDec->GetParError(2) << ") us" <<endl;
+   cout << "[RESULT   ] Muon capture time             : (" << 1./(fitCap0->GetParameter(2)) << "+-" << (1/(fitCap0->GetParameter(2)*fitCap0->GetParameter(2)))*fitCap0->GetParError(2) << ") us" <<endl;   
+   cout << "[RESULT   ] Muon capture time (doppio exp): (" << 1./(fitCap ->GetParameter(4)) << "+-" << (1/(fitCap ->GetParameter(4)*fitCap ->GetParameter(4)))*fitCap ->GetParError(4) << ") us" <<endl;
+   cout << "[RESULT   ]" << endl;
 
-  TF1 *fitDecCL = new TF1("fitDecCL","[0]+[1]*TMath::Exp(-[2]*0.100*(x))");
-  fitDecCL -> SetParameter(2, 2.2);
-  fitDecCL -> SetParLimits(1, 0, 10000000);
+
+  
+
    
-   TCanvas *canvas2 = new TCanvas("CLOCK", "CLOCK", 200, 10, 600, 400);
-   //gPad->SetLogy();
-   gStyle->SetOptStat("emr");
+   //=======================================
+   //--------------- CLOCK -----------------
+   //=======================================
+   TCanvas *canvas2  = new TCanvas("CLOCK", "CLOCK", 200, 10, 600, 400);
+   canvas2  ->cd();
+   //gPad     -> SetLogy();
+   gStyle   ->SetOptStat("emr");
    histCLOCK -> GetXaxis()->SetTitle("#canali");  
    histCLOCK -> GetYaxis()->SetTitle("#eventi");
-   //histCLOCK -> DrawCopy("hist");
-   //histCLOCK -> Fit(fitDecCL, "R");
    //histCLOCK -> GetXaxis()->SetRangeUser(0.,500.);
-   //histCLOCK -> Fit(fitDecCL, "R");
-   histCLOCK -> Fit(fitDecCL, "", "", 10, 60);
 
+   //---------------------------------------
+   cout << "---------------------------------------" << endl;
+   cout << "DECAY - esponenziale semplice"           << endl;
+   
+   TF1 *fitDecCL = new TF1("fitDecCL","[0]+[1]*TMath::Exp(-[2]*0.100*(x))");
+   fitDecCL  -> SetParameter(2, 2.2          );
+   fitDecCL  -> SetParLimits(1, 0, 10000000  );
+   histCLOCK -> Fit(fitDecCL, "ME", "", 8, 60);
    Double_t parDec1CL = fitDecCL->GetParameter(1);
    Double_t parDec2CL = fitDecCL->GetParameter(2);
+   cout<<"Chi^2: "<<fitDecCL->GetChisquare()<<", number of DoF: "<<fitDecCL->GetNDF()<<" (Probability: "<<fitDecCL->GetProb()<<")."<<endl;
+
+   //---------------------------------------
+   cout << "CAPTURE - esponenziale semplice" << endl;
+   cout << "---------------------------------------" << endl;
+   TF1 *fitCapCL0   = new TF1("fitCapCL0","[0]+[1]*TMath::Exp(-[2]*0.100*(x))");
+   fitCapCL0 -> SetParLimits(1, 0, 10000000);
+   fitCapCL0 -> SetLineColor(kBlue);
+   fitCapCL0 -> SetLineWidth(2);
+   histCLOCK -> Fit(fitCapCL0, "ME+", "", 2, 6);
+   cout<<"Chi^2: "<<fitCapCL0->GetChisquare()<<", number of DoF: "<<fitCapCL0->GetNDF()<<" (Probability: "<<fitCapCL0->GetProb()<<")."<< endl;
+
+   //---------------------------------------
+   cout << "---------------------------------------" << endl;
+   cout << "CAPTURE - somma di esponenziali per tenere conto del contributo decay" << endl;
+   TF1 *fitCapCL = new TF1("fitCapCL","[0]+ ( [1]*TMath::Exp(-[2]*0.100*(x)) + [3]*TMath::Exp(-[4]*0.100*(x)))");
+   fitCapCL  -> SetParLimits(1, 0, 10000000);
+   //fitCapCL-> SetParameter(3, fitDec->GetParameter(1));
+   //fitCapCL-> SetParameter(4, fitDec->GetParameter(2));
+   fitCapCL  -> SetParLimits(3, parDec1CL - parDec1CL/10., parDec1CL + parDec1CL/10.);
+   fitCapCL  -> SetParLimits(4, parDec2CL - parDec2CL/10., parDec2CL + parDec2CL/10.);
+   fitCapCL  -> SetLineColor(kGreen);
+   histCLOCK -> Fit(fitCapCL, "ME+", "", 2, 6);
+   Double_t parCap4CL = fitCapCL->GetParameter(4);
+   cout<<"Chi^2: "<<fitCapCL->GetChisquare()<<", number of DoF: "<<fitCapCL->GetNDF()<<" (Probability: "<<fitCapCL->GetProb()<<")."<< endl;
 
    histCLOCK -> Draw();
-   cout<<"Chi^2: "<<fitDecCL->GetChisquare()<<", number of DoF: "<<fitDecCL->GetNDF()<<" (Probability: "<<fitDecCL->GetProb()<<")."<<endl;
-   //cout<<"Chi^2: "<<fitCapCL->GetChisquare()<<", number of DoF: "<<fitCapCL->GetNDF()<<" (Probability: "<<fitCapCL->GetProb()<<")."<< endl;
+
    
-   //per il fit complessivo
    cout << "[RESULT   ]" << endl;
-   //cout << "[RESULT   ] Muon mean lifetime: (" << (0.1/4)/(fitF1CL->GetParameter(2)) << "+-" << (1/(fitF1CL->GetParameter(2)*fitF1CL->GetParameter(2)))*fitF1CL->GetParError(2) << ") us" <<endl;
-   cout << "[RESULT   ] Muon mean lifetime: (" << 1/parDec2CL << "+-" << (1/(fitDecCL->GetParameter(2)*fitDecCL->GetParameter(2)))*fitDecCL->GetParError(2) << ") us" <<endl;   
+   cout << "[RESULT   ] Muon mean lifetime            : (" << 1/(fitDecCL->GetParameter(2)) << "+-" << (1/(fitDecCL->GetParameter(2)*fitDecCL->GetParameter(2)))*fitDecCL->GetParError(2) << ") us" <<endl;
+   cout << "[RESULT   ] Muon capture time             : (" << 1./(fitCapCL0->GetParameter(2)) << "+-" << (1/(fitCapCL0->GetParameter(2)*fitCapCL0->GetParameter(2)))*fitCapCL0->GetParError(2) << ") us" <<endl;   
+   cout << "[RESULT   ] Muon capture time             : (" << 1/(fitCapCL->GetParameter(4)) << "+-" << (1/(fitCapCL->GetParameter(4)*fitCapCL->GetParameter(4)))*fitCapCL->GetParError(4) << ") us" <<endl;
    cout << "[RESULT   ]" << endl;
-
-
-
    
    
 
    
-   /*
+   
+
+   
+
    TCanvas *canvas3 = new TCanvas("ADC1", "ADC1", 200, 10, 600, 400);
    // gPad->SetLogy();
    histADC1 -> GetXaxis()->SetTitle("# canali");
@@ -220,7 +268,7 @@ void analysisLivia(TString inputFilePath="readFile.root"){
    //histADCGnP->GetYaxis()->SetRangeUser(0.,1400.);
    //histADCGnP->GetXaxis()->SetRangeUser(0.,2025.);  //c'è un picco al canale 2030
    histADCGnP -> DrawCopy("hist");
-   */
+
      //  readFile -> Close();
      
      }
