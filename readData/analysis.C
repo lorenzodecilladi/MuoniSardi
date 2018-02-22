@@ -109,14 +109,14 @@ void analysis(TString inputFilePath="readFile.root"){
     //if((ADCchSG>330 && ADCchSG<890) || ADCchSG>2025){ //"elettroni" + overflow
     //if(ADCchSG>890 && ADCchSG<2025){ //muoni
     //if(ADCchS1>330 && ADCchS1<1000){
-    //if(TDCch<180){ //cattura (solo tempi bassi, 180 ch = 0.45 us = 450 ns
-    //if(TDCch>180){ //solo decadimento (e overflow dell'ADC)
+    // if(TDCch<180){ //cattura (solo tempi bassi, 180 ch = 0.45 us = 450 ns
+    if(TDCch>180){ //solo decadimento (e overflow dell'ADC)
     //if(TDCch>180 && TDCch<4000){ //solo decadimento, tagliato anche l'overflow dell'ADC
     histCLOCK  -> Fill(CLOCKch);
     histTIME   -> Fill(TDCch);
     histADC1   -> Fill(ADCchS1);
     histADCG   -> Fill(ADCchSG);
-    //}
+    }
     
   }
   
@@ -290,9 +290,16 @@ void analysis(TString inputFilePath="readFile.root"){
      
    TCanvas *canvas3nP = new TCanvas("ADC1nP", "ADC1nP", 200, 10, 600, 400);
    // gPad->SetLogy();
+
+   TF1 *fitGausS1 = new TF1 ("gaus", "gaus");
+   histADC1nP -> Fit(fitGausS1, "ME", "", 20, 90);
+  
+   TF1 *fitLanMuS1 = new TF1 ("landau", "landau");
+   histADC1nP -> Fit(fitLanMuS1, "ME+", "", 250, 550);
+   
    histADC1nP -> GetXaxis()->SetTitle("# canali");
    histADC1nP -> GetYaxis()->SetTitle("# eventi");    
-   //histADC1nP->GetYaxis()->SetRangeUser(0.,3000.);
+   histADC1nP->GetYaxis()->SetRangeUser(0.,800.);
    histADC1nP -> Draw("E");
      
    TCanvas *canvas4 = new TCanvas("ADCG", "ADCG", 200, 10, 600, 400);
@@ -305,10 +312,20 @@ void analysis(TString inputFilePath="readFile.root"){
    
    TCanvas *canvas4nP = new TCanvas("ADCGnP", "ADCGnP", 200, 10, 600, 400);
    // gPad->SetLogy();
+
+   TF1 *fitGaus = new TF1 ("gaus", "gaus");
+   histADCGnP -> Fit(fitGaus, "ME", "", 0, 60);
+  
+   TF1 *fitLanEl = new TF1 ("landau", "landau");
+   histADCGnP -> Fit(fitLanEl, "ME+", "", 90, 450);
+
+   // TF1 *fitLanMuSG = new TF1 ("landau", "landau");
+   //histADCGnP -> Fit(fitLanMuSG, "", "", 750, 1400);
+
    histADCGnP -> GetXaxis()->SetTitle("# canali");
    histADCGnP -> GetYaxis()->SetTitle("# eventi");
-   //histADCGnP->GetYaxis()->SetRangeUser(0.,1400.);
-   //histADCGnP->GetXaxis()->SetRangeUser(0.,2025.);  //c'è un picco al canale 2030
+   histADCGnP->GetYaxis()->SetRangeUser(0.,900.);
+   histADCGnP->GetXaxis()->SetRangeUser(0.,2025.);  //c'è un picco al canale 2030
    histADCGnP -> Draw("E");
 
      //  readFile -> Close();
