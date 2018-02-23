@@ -70,7 +70,7 @@ void analysis(TString inputFilePath="readFile.root"){
   TH1F *histADC1nP  = new TH1F("histADC1nP" , "ADCS1 [2249W] nP"   , nbinsADC ,  -0.5,  2048.5);
   TH1F *histADCGnP  = new TH1F("histADCGnP" , "ADCSG [2249W] nP"   , nbinsADC ,  -0.5,  2048.5);
   TH1F *histTIME    = new TH1F("histTIME"   , "TDC[2228A]"         , nbinsTIME,  -0.5,  4010.5);
-  TH1F *histTIMEmus = new TH1F("histTIMEmus", "TDC[2228A]"         , nbinsTIME,  -0.5,  4010.5);
+  TH1F *histTIMEln  = new TH1F("histTIMEln" , "TDC[2228A] (ln)"    , nbinsTIME,  -0.5,  4010.5);
   
   UInt_t  nEvts     = readTree -> GetEntries();
   Float_t binW      = 10;
@@ -92,32 +92,46 @@ void analysis(TString inputFilePath="readFile.root"){
   //FIT se avessimo solo mu- .....
   //TF1 *fitBrutto = new TF1("fitBrutto","[0]+[1]*TMath::Exp(-[2]*x)", 0, 200);
   //fitBrutto -> SetParLimits(1, 0, 10000000);
-  
-  
-  
+
+
+  int validCheck[16] = {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0};
+  int validCounter = 0;
+
+  int vetoCounter = 0;
   
   for(UInt_t i=0; i<nEvts; i++){
     readTree   -> GetEvent(i);
-    /*
 
-    histCLOCK  -> Fill(CLOCKch);
-    histTIME   -> Fill(TDCch);
-    histADC1   -> Fill(ADCchS1);
-    histADCG   -> Fill(ADCchSG);
-    }
-    */
-    //if((ADCchSG>330 && ADCchSG<890) || ADCchSG>2025){ //"elettroni" + overflow
-    //if(ADCchSG>890 && ADCchSG<2025){ //muoni
-    //if(ADCchS1>330 && ADCchS1<1000){
-    // if(TDCch<180){ //cattura (solo tempi bassi, 180 ch = 0.45 us = 450 ns
-    if(TDCch>180){ //solo decadimento (e overflow dell'ADC)
-    //if(TDCch>180 && TDCch<4000){ //solo decadimento, tagliato anche l'overflow dell'ADC
-    histCLOCK  -> Fill(CLOCKch);
-    histTIME   -> Fill(TDCch);
-    histADC1   -> Fill(ADCchS1);
-    histADCG   -> Fill(ADCchSG);
+    //check for validation string
+    Bool_t validation = kTRUE;
+    for(UInt_t j=0; j<16; j++){
+      if(validStr[j]!=validCheck[j])validation=kFALSE;      
     }
     
+    if(validation==kFALSE){ //exclude event if validation string is not OK
+      validCounter++;
+    }
+    else{
+      
+      
+      if(pattReg[0]!=1){ //elimina eventi vetati da S2 (offline)
+      //if(pattReg[0]==1){ //   solo eventi vetati da S2 (offline)
+      //vetoCounter++;
+
+      
+      //if((ADCchSG>330 && ADCchSG<890) || ADCchSG>2025){ //"elettroni" + overflow
+      //if(ADCchSG>890 && ADCchSG<2025){ //muoni
+      //if(ADCchS1>330 && ADCchS1<1000){
+      // if(TDCch<180){ //cattura (solo tempi bassi, 180 ch = 0.45 us = 450 ns
+      //if(TDCch>180){ //solo decadimento (e overflow dell'ADC)
+      //if(TDCch>180 && TDCch<4000){ //solo decadimento, tagliato anche l'overflow dell'ADC
+      histCLOCK  -> Fill(CLOCKch);
+      histTIME   -> Fill(TDCch);
+      histADC1   -> Fill(ADCchS1);
+      histADCG   -> Fill(ADCchSG);
+      //}
+      }
+    }
   }
   
   Int_t pedestalS1 = 159;
@@ -126,7 +140,23 @@ void analysis(TString inputFilePath="readFile.root"){
   for(Int_t i=0; i<nbinsADC; i++){
     histADC1nP->SetBinContent(i+1, histADC1->GetBinContent(pedestalS1+i+1));
     histADCGnP->SetBinContent(i+1, histADCG->GetBinContent(pedestalSG+i+1));
+    if(histTIME->GetBinContent(i+1)>0){
+      histTIMEln->SetBinContent(i+1, TMath::Log(histTIME->GetBinContent(i+1)));
+    }
   }
+
+
+  cout << endl;
+  cout << endl;
+  cout << "Events not validated: " << validCounter << endl;
+  cout << endl;
+  cout << endl;
+
+  cout << endl;
+  cout << endl;
+  cout << "Events not vetoed by S2 (offline, through pattern unit): " << vetoCounter << endl;
+  cout << endl;
+  cout << endl;
   
   
   //=======================================
@@ -207,8 +237,19 @@ void analysis(TString inputFilePath="readFile.root"){
    cout << "[RESULT   ]" << endl;
 
 
-  
 
+   //=======================================
+   //---------------- TDC ------------------
+   //=======================================
+   TCanvas *canvas1ln  = new TCanvas("TDCln", "TDCln", 200, 10, 600, 400);
+   canvas1ln  -> cd();
+   //gPad       -> SetLogy();
+   gStyle     -> SetOptStat("emr");
+   histTIMEln -> GetXaxis() -> SetTitle("# canali");
+   histTIMEln -> GetYaxis() -> SetTitle("# eventi");
+   histTIMEln -> Draw();
+   
+   
    
    //=======================================
    //--------------- CLOCK -----------------
@@ -220,7 +261,7 @@ void analysis(TString inputFilePath="readFile.root"){
    histCLOCK -> GetXaxis()->SetTitle("#canali");  
    histCLOCK -> GetYaxis()->SetTitle("#eventi");
    //histCLOCK -> GetXaxis()->SetRangeUser(0.,500.);
-
+   
    //---------------------------------------
    cout << "---------------------------------------" << endl;
    cout << "DECAY - esponenziale semplice"           << endl;
