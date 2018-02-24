@@ -1,0 +1,12 @@
+OK Solo lambdaC per il fit della cattura
+
+OK Studiare gli eventi vetati e vedere se il massimo della landau dei muoni è alla stessa energia degli eventi non vetati
+
+giocare con i range
+
+S1 senza tagli
+SG con tagli
+
+Validation string sempre attiva
+
+
